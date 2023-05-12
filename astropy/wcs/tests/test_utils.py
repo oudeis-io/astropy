@@ -8,6 +8,7 @@ from packaging.version import Version
 
 from astropy import units as u
 from astropy.coordinates import ITRS, EarthLocation, SkyCoord
+from astropy.coordinates.representation.geodetic import WGS84GeodeticRepresentation
 from astropy.io import fits
 from astropy.time import Time
 from astropy.units import Quantity
@@ -267,7 +268,14 @@ def test_celestial():
 
 def test_wcs_to_celestial_frame():
     # Import astropy.coordinates here to avoid circular imports
-    from astropy.coordinates.builtin_frames import FK4, FK5, ICRS, ITRS, Galactic
+    from astropy.coordinates.builtin_frames import (
+        FK4,
+        FK5,
+        ICRS,
+        ITRS,
+        Galactic,
+        BodyBaseCoordinateFrame,
+    )
 
     mywcs = WCS(naxis=2)
     mywcs.wcs.set()
@@ -321,6 +329,15 @@ def test_wcs_to_celestial_frame():
     mywcs.wcs.set()
     frame = wcs_to_celestial_frame(mywcs)
     assert isinstance(frame, ITRS)
+    assert frame.obstime == Time("2017-08-17T12:41:04.430")
+
+    mywcs = WCS(naxis=2)
+    mywcs.wcs.ctype = ["MALN-TAN", "MALT-TAN"]
+    mywcs.wcs.radesys = "ICRS"
+    mywcs.wcs.dateobs = "2017-08-17T12:41:04.430"
+    mywcs.wcs.set()
+    frame = wcs_to_celestial_frame(mywcs)
+    assert isinstance(frame, BodyBaseCoordinateFrame)
     assert frame.obstime == Time("2017-08-17T12:41:04.430")
 
     for equinox in [np.nan, 1987, 1982]:
@@ -401,6 +418,7 @@ def test_celestial_frame_to_wcs():
         BaseCoordinateFrame,
         FK4NoETerms,
         Galactic,
+        BodyBaseCoordinateFrame,
     )
 
     class FakeFrame(BaseCoordinateFrame):
@@ -471,6 +489,15 @@ def test_celestial_frame_to_wcs():
     assert tuple(mywcs.wcs.ctype) == ("TLON-CAR", "TLAT-CAR")
     assert mywcs.wcs.radesys == "ITRS"
     assert mywcs.wcs.dateobs == Time("J2000").utc.fits
+
+    class WGS84BodyFrame(BodyBaseCoordinateFrame):
+        representation = WGS84GeodeticRepresentation
+        obstime = Time("2017-08-17T12:41:04.43")
+
+    frame = WGS84BodyFrame()
+    mywcs = celestial_frame_to_wcs(frame, projection="CAR")
+    assert tuple(mywcs.wcs.ctype) == ("LON--CAR", "LAT--CAR")
+    assert mywcs.wcs.dateobs == "2017-08-17T12:41:04.430"
 
 
 def test_celestial_frame_to_wcs_extend():

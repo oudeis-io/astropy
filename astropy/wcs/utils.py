@@ -67,6 +67,7 @@ def _wcs_to_celestial_frame_builtin(wcs):
         FK4NoETerms,
         Galactic,
         SphericalRepresentation,
+        BodyBaseCoordinateFrame,
     )
 
     # Import astropy.time here otherwise setup.py fails before extensions are compiled
@@ -118,6 +119,10 @@ def _wcs_to_celestial_frame_builtin(wcs):
                 representation_type=SphericalRepresentation,
                 obstime=wcs.wcs.dateobs or None,
             )
+        elif ("LN" in xcoord and "LT" in ycoord and "H" not in xcoord) or (
+            "LON" in xcoord and "LAT" in ycoord
+        ):
+            frame = BodyBaseCoordinateFrame(obstime=wcs.wcs.dateobs or None)
         else:
             frame = None
 
@@ -134,6 +139,7 @@ def _celestial_frame_to_wcs_builtin(frame, projection="TAN"):
         BaseRADecFrame,
         FK4NoETerms,
         Galactic,
+        BodyBaseCoordinateFrame,
     )
 
     # Create a 2-dimensional WCS
@@ -162,6 +168,10 @@ def _celestial_frame_to_wcs_builtin(frame, projection="TAN"):
         xcoord = "TLON"
         ycoord = "TLAT"
         wcs.wcs.radesys = "ITRS"
+        wcs.wcs.dateobs = frame.obstime.utc.isot
+    elif isinstance(frame, BodyBaseCoordinateFrame):
+        xcoord = "LON-"
+        ycoord = "LAT-"
         wcs.wcs.dateobs = frame.obstime.utc.isot
     else:
         return None

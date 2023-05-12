@@ -8,6 +8,7 @@ import pytest
 
 from astropy import units as u
 from astropy.coordinates import EarthLocation, SkyCoord, galactocentric_frame_defaults
+from astropy.coordinates import WGS84GeodeticRepresentation
 from astropy.coordinates import representation as r
 from astropy.coordinates.attributes import (
     Attribute,
@@ -29,6 +30,7 @@ from astropy.coordinates.builtin_frames import (
     Galactic,
     Galactocentric,
     HADec,
+    BodyBaseCoordinateFrame,
 )
 from astropy.coordinates.representation import (
     REPRESENTATION_CLASSES,
@@ -816,6 +818,21 @@ def test_hadec_attributes():
 
     sr = hd2.represent_as(r.SphericalRepresentation)
     assert_allclose(sr.lon, -1 * u.hourangle)
+
+
+def test_basebodyframe_attributes():
+    class WGS84BodyFrame(BodyBaseCoordinateFrame):
+        representation = WGS84GeodeticRepresentation
+
+    wgs84 = WGS84BodyFrame(25 * u.deg, 2 * u.deg)
+    assert wgs84.representation == WGS84GeodeticRepresentation
+    assert wgs84.lon == 25 * u.deg
+    assert wgs84.lat == 2 * u.deg
+    assert wgs84.height == 0.0 * u.m
+    assert wgs84.obstime == None
+
+    wgs84 = WGS84BodyFrame(25 * u.deg, 2 * u.deg, wrap_longitude=False)
+    assert wgs84._wrap_angle == None
 
 
 def test_itrs_earth_location():

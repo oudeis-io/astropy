@@ -27,6 +27,7 @@ from astropy.coordinates.baseframe import frame_transform_graph
 
 from .altaz import AltAz
 from .baseradec import BaseRADecFrame
+from .bodyframes import BodyBaseCoordinateFrame
 from .cirs import CIRS
 from .ecliptic import (
     BarycentricMeanEcliptic,
@@ -99,6 +100,7 @@ __all__ = [
     "HeliocentricMeanEcliptic",
     "GeocentricTrueEcliptic",
     "BarycentricTrueEcliptic",
+    "BodyBaseCoordinateFrame",
     "HeliocentricTrueEcliptic",
     "HeliocentricEclipticIAU76",
     "CustomBarycentricEcliptic",
