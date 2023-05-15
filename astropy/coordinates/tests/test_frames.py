@@ -821,18 +821,22 @@ def test_hadec_attributes():
 
 
 def test_basebodyframe_attributes():
-    class WGS84BodyFrame(BodyBaseCoordinateFrame):
+    class WGS84BodyFrame180(BodyBaseCoordinateFrame):
         representation = WGS84GeodeticRepresentation
 
-    wgs84 = WGS84BodyFrame(25 * u.deg, 2 * u.deg)
+    wgs84 = WGS84BodyFrame180(325 * u.deg, 2 * u.deg)
     assert wgs84.representation == WGS84GeodeticRepresentation
-    assert wgs84.lon == 25 * u.deg
+    assert wgs84.lon == -35 * u.deg
     assert wgs84.lat == 2 * u.deg
     assert wgs84.height == 0.0 * u.m
     assert wgs84.obstime == None
 
-    wgs84 = WGS84BodyFrame(25 * u.deg, 2 * u.deg, wrap_longitude=False)
-    assert wgs84._wrap_angle == None
+    class WGS84BodyFrame360(BodyBaseCoordinateFrame):
+        representation = WGS84GeodeticRepresentation
+        wrap_angle = 360.0 * u.deg
+
+    wgs84 = WGS84BodyFrame360(325 * u.deg, 2 * u.deg)
+    assert wgs84.lon == 325 * u.deg
 
 
 def test_itrs_earth_location():

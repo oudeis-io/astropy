@@ -30,6 +30,8 @@ doc_footer_geo = """
     obstime : `~astropy.time.Time`, optional
         The time at which the observation is taken.  Used for determining the
         position of the Earth. Defaults to J2000.
+    wrap_angle : `~astropy.coordinates.Angle`, optional
+        Impose a specific wrap angle for the frame.
 """
 
 
@@ -52,25 +54,21 @@ class BodyBaseCoordinateFrame(BaseCoordinateFrame):
     default_representation = BaseGeodeticRepresentation
 
     obstime = TimeAttribute(default=None)
+    wrap_angle = 180.0 * u.deg  # for longitude
 
-    _wrap_angle = 180 * u.deg  # for longitude
     _positive_longitude = "east"  # for longitude
 
     def __init__(self, *args, **kwargs):
         self.object_name = None
 
-        # If wrap_longitude=False is passed in, do not impose a specific wrap angle for the frame
-        if not kwargs.pop("wrap_longitude", True):
-            self._wrap_angle = None
-
         super().__init__(*args, **kwargs)
         if self.has_data:
-            self._set_data_lon_wrap_angle(self.data)
+            self._set_data_lon_wrap_angle(self.data, self.wrap_angle)
 
     @staticmethod
-    def _set_data_lon_wrap_angle(data):
+    def _set_data_lon_wrap_angle(data, wrap_angle):
         if hasattr(data, "lon"):
-            data.lon.wrap_angle = 180.0 * u.deg
+            data.lon.wrap_angle = wrap_angle
         return data
 
     def represent_as(self, base, s="base", in_frame_units=False):
@@ -79,5 +77,5 @@ class BodyBaseCoordinateFrame(BaseCoordinateFrame):
         representations.
         """
         data = super().represent_as(base, s, in_frame_units=in_frame_units)
-        self._set_data_lon_wrap_angle(data)
+        self._set_data_lon_wrap_angle(data, self.wrap_angle)
         return data
