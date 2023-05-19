@@ -29,8 +29,45 @@ class CustomGeodetic(BaseGeodeticRepresentation):
     _equatorial_radius = 4000000.0 * u.m
 
 
+class IAUMARS2000GeodeticRepresentationEast180(BaseGeodeticRepresentation):
+    _equatorial_radius = 3396190.0 * u.m
+    _flattening = 0.5886007555512007 * u.percent
+
+
+class IAUMARS2000GeodeticRepresentationWest180(BaseGeodeticRepresentation):
+    _equatorial_radius = 3396190.0 * u.m
+    _flattening = 0.5886007555512007 * u.percent
+    _positive_longitude = "west"
+
+
+class IAUMARS2000GeodeticRepresentationEast360(BaseGeodeticRepresentation):
+    _equatorial_radius = 3396190.0 * u.m
+    _flattening = 0.5886007555512007 * u.percent
+    _wrap_angle = 360
+
+
+class IAUMARS2000GeodeticRepresentationWest360(BaseGeodeticRepresentation):
+    _equatorial_radius = 3396190.0 * u.m
+    _flattening = 0.5886007555512007 * u.percent
+    _positive_longitude = "west"
+    _wrap_angle = 360
+
+
+class IAUMARS2000GeodeticRepresentationOcentric(BaseGeodeticRepresentation):
+    _equatorial_radius = 3396190.0 * u.m
+    _flattening = 0.5886007555512007 * u.percent
+    _ographic = False
+
+
 @pytest.mark.parametrize(
-    "geodeticrepresentation", [CustomGeodetic, WGS84GeodeticRepresentation]
+    "geodeticrepresentation",
+    [
+        CustomGeodetic,
+        WGS84GeodeticRepresentation,
+        IAUMARS2000GeodeticRepresentationEast360,
+        IAUMARS2000GeodeticRepresentationWest360,
+        IAUMARS2000GeodeticRepresentationOcentric,
+    ],
 )
 def test_cartesian_geodetic_roundtrip(geodeticrepresentation):
     # Test array-valued input in the process.
@@ -48,7 +85,14 @@ def test_cartesian_geodetic_roundtrip(geodeticrepresentation):
 
 
 @pytest.mark.parametrize(
-    "geodeticrepresentation", [CustomGeodetic, WGS84GeodeticRepresentation]
+    "geodeticrepresentation",
+    [
+        CustomGeodetic,
+        WGS84GeodeticRepresentation,
+        IAUMARS2000GeodeticRepresentationEast360,
+        IAUMARS2000GeodeticRepresentationWest360,
+        IAUMARS2000GeodeticRepresentationOcentric,
+    ],
 )
 def test_geodetic_cartesian_roundtrip(geodeticrepresentation):
     initial_geodetic = geodeticrepresentation(
@@ -149,7 +193,7 @@ def test_geodetic_subclass_bad_ellipsoid():
             _ellipsoid = "foo"
 
     assert "foo" not in ELLIPSOIDS
-    assert "customgeodeticellipsoiderror" not in REPRESENTATION_CLASSES
+    assert "invalidcustomgeodeticellipsoid" not in REPRESENTATION_CLASSES
 
 
 def test_geodetic_subclass_missing_equatorial_radius():
@@ -159,4 +203,103 @@ def test_geodetic_subclass_missing_equatorial_radius():
         class MissingCustomGeodeticAttribute(BaseGeodeticRepresentation):
             _flattening = 0.075 * u.dimensionless_unscaled
 
-    assert "customgeodeticerror" not in REPRESENTATION_CLASSES
+    assert "missingcustomgeodeticattribute" not in REPRESENTATION_CLASSES
+
+
+def test_geodetic_subclass_bad_attributes():
+    msg = "Invalid argument 'foo' for '_positive_logitude'"
+    with pytest.raises(ValueError, match=msg):
+
+        class BadPositiveLongitudeCustomGeodetic(BaseGeodeticRepresentation):
+            _equatorial_radius = 3000.0 * u.km
+            _flattening = 0.075 * u.dimensionless_unscaled
+            _positive_longitude = "foo"
+
+    assert "badpositivelongitudecustomgeodetic" not in REPRESENTATION_CLASSES
+
+    msg = "Invalid argument 'foo' for '_wrap_angle'"
+    with pytest.raises(ValueError, match=msg):
+
+        class BadWrapAngleCustomGeodetic(BaseGeodeticRepresentation):
+            _equatorial_radius = 3000.0 * u.km
+            _flattening = 0.075 * u.dimensionless_unscaled
+            _wrap_angle = "foo"
+
+    assert "badwrapanglecustomgeodetic" not in REPRESENTATION_CLASSES
+
+
+def test_from_cartesian_positive_direction_180_360():
+    # Test array-valued input in the process.
+    initial_cartesian = CartesianRepresentation(
+        x=[1, 3000.0, 2600.0] * u.km,
+        y=[7000.0, 4.0, -5000.0] * u.km,
+        z=[5.0, 6000.0, 3000.0] * u.km,
+    )
+
+    assert_quantity_allclose(
+        (
+            IAUMARS2000GeodeticRepresentationEast180.from_representation(
+                initial_cartesian
+            ).lon.value
+        )
+        * u.deg,
+        -(
+            IAUMARS2000GeodeticRepresentationWest180.from_representation(
+                initial_cartesian
+            ).lon.value
+        )
+        * u.deg,
+    )
+
+    assert_quantity_allclose(
+        (
+            IAUMARS2000GeodeticRepresentationEast180.from_representation(
+                initial_cartesian
+            ).lon.value
+        )
+        % 180
+        * u.deg,
+        (
+            IAUMARS2000GeodeticRepresentationEast360.from_representation(
+                initial_cartesian
+            ).lon.value
+        )
+        % 180
+        * u.deg,
+    )
+
+    assert_quantity_allclose(
+        (
+            IAUMARS2000GeodeticRepresentationEast180.from_representation(
+                initial_cartesian
+            ).lon.value
+        )
+        % 180
+        * u.deg,
+        (
+            360
+            - (
+                IAUMARS2000GeodeticRepresentationWest360.from_representation(
+                    initial_cartesian
+                ).lon.value
+            )
+        )
+        % 180
+        * u.deg,
+    )
+
+    assert_quantity_allclose(
+        (
+            IAUMARS2000GeodeticRepresentationEast360.from_representation(
+                initial_cartesian
+            ).lon.value
+        )
+        * u.deg,
+        (
+            360
+            - IAUMARS2000GeodeticRepresentationWest360.from_representation(
+                initial_cartesian
+            ).lon.value
+        )
+        * u.deg,
+    )
