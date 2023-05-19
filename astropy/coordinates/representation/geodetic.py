@@ -147,7 +147,6 @@ class BaseGeodeticRepresentation(BaseRepresentation):
         lon, lat, height = erfa.gc2gde(
             cls._equatorial_radius, cls._flattening, cart.get_xyz(xyz_axis=-1)
         )
-        lon = _compute_longitude(lon, cls._positive_longitude, cls._wrap_angle)
         if not cls._ographic:
             # Compute planetocentric angles
             xyz = cart.get_xyz()
@@ -167,8 +166,8 @@ class BaseGeodeticRepresentation(BaseRepresentation):
                 (d - r_spheroid),
                 (np.abs(xyz[2]) - np.abs(z_spheroid)),
             )
-
-        return cls(lon, lat, height, copy=False)
+        lon = _compute_longitude(lon, cls._positive_longitude, cls._wrap_angle)
+        return cls(lon, lat.to(u.deg), height, copy=False)
 
 
 @format_doc(geodetic_base_doc)

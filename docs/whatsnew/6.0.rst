@@ -44,8 +44,8 @@ bodies by subclassing `~astropy.coordinates.BaseGeodeticRepresentation` and defi
     <CartesianRepresentation (x, y, z) in m
         (2481112.60371134, 2554647.09482601, 5274064.55958489)>
     >>> representation.represent_as(WGS84GeodeticRepresentation) # doctest: +FLOAT_CMP
-    <WGS84GeodeticRepresentation (lon, lat, height) in (rad, rad, m)
-        (0.79999959, 0.98000063, 370.01796023)>
+    <WGS84GeodeticRepresentation (lon, lat, height) in (deg, deg, m)
+        (45.8366, 56.14990022, 370.01796023)>
 
 See :ref:`astropy-coordinates-create-geodetic` for more details.
 
