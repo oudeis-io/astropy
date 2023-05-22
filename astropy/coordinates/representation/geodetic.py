@@ -57,9 +57,9 @@ class BaseGeodeticRepresentation(BaseRepresentation):
     respectively), or alternatively an ``_ellipsoid`` attribute to the relevant ERFA
     index (as passed in to `erfa.eform`).
     Longitudes are east positive and span from -180 to 180 degrees by default.
-    They can be made west positive setting `_positive_longitude='west'`, or spanning
-    from 0 to 360 degrees setting `_wrap_angle=360`.
-    Planetocentric latitudes can be obtained setting `_ographic=False`.
+    They can be made west positive setting ``_positive_longitude='west'``, or spanning
+    from 0 to 360 degrees setting ``_wrap_angle=360``.
+    Planetocentric latitudes can be obtained setting ``_ographic=False``.
     """
 
     attr_classes = {"lon": Longitude, "lat": Latitude, "height": u.Quantity}
