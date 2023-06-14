@@ -4,10 +4,13 @@
 import pytest
 
 from astropy import units as u
+from astropy.coordinates.angles import Longitude
 from astropy.coordinates.representation import (
     CartesianRepresentation,
     REPRESENTATION_CLASSES,
     BaseGeodeticRepresentation,
+    BaseBodycentricRepresentation,
+    WestLongitudeMixin,
     GRS80GeodeticRepresentation,
     WGS72GeodeticRepresentation,
     WGS84GeodeticRepresentation,
@@ -34,29 +37,30 @@ class IAUMARS2000GeodeticRepresentationEast180(BaseGeodeticRepresentation):
     _flattening = 0.5886007555512007 * u.percent
 
 
-class IAUMARS2000GeodeticRepresentationWest180(BaseGeodeticRepresentation):
+class IAUMARS2000GeodeticRepresentationWest180(
+    WestLongitudeMixin, BaseGeodeticRepresentation
+):
     _equatorial_radius = 3396190.0 * u.m
     _flattening = 0.5886007555512007 * u.percent
-    _positive_longitude = "west"
 
 
 class IAUMARS2000GeodeticRepresentationEast360(BaseGeodeticRepresentation):
     _equatorial_radius = 3396190.0 * u.m
     _flattening = 0.5886007555512007 * u.percent
-    _wrap_angle = 360
+    _wrap_angle = 360 * u.deg
 
 
-class IAUMARS2000GeodeticRepresentationWest360(BaseGeodeticRepresentation):
+class IAUMARS2000GeodeticRepresentationWest360(
+    WestLongitudeMixin, BaseGeodeticRepresentation
+):
     _equatorial_radius = 3396190.0 * u.m
     _flattening = 0.5886007555512007 * u.percent
-    _positive_longitude = "west"
-    _wrap_angle = 360
+    _wrap_angle = 360 * u.deg
 
 
-class IAUMARS2000GeodeticRepresentationOcentric(BaseGeodeticRepresentation):
+class IAUMARS2000BodycentricRepresentation(BaseBodycentricRepresentation):
     _equatorial_radius = 3396190.0 * u.m
     _flattening = 0.5886007555512007 * u.percent
-    _ographic = False
 
 
 @pytest.mark.parametrize(
@@ -66,7 +70,7 @@ class IAUMARS2000GeodeticRepresentationOcentric(BaseGeodeticRepresentation):
         WGS84GeodeticRepresentation,
         IAUMARS2000GeodeticRepresentationEast360,
         IAUMARS2000GeodeticRepresentationWest360,
-        IAUMARS2000GeodeticRepresentationOcentric,
+        IAUMARS2000BodycentricRepresentation,
     ],
 )
 def test_cartesian_geodetic_roundtrip(geodeticrepresentation):
@@ -91,7 +95,7 @@ def test_cartesian_geodetic_roundtrip(geodeticrepresentation):
         WGS84GeodeticRepresentation,
         IAUMARS2000GeodeticRepresentationEast360,
         IAUMARS2000GeodeticRepresentationWest360,
-        IAUMARS2000GeodeticRepresentationOcentric,
+        IAUMARS2000BodycentricRepresentation,
     ],
 )
 def test_geodetic_cartesian_roundtrip(geodeticrepresentation):
@@ -207,18 +211,8 @@ def test_geodetic_subclass_missing_equatorial_radius():
 
 
 def test_geodetic_subclass_bad_attributes():
-    msg = "Invalid argument 'foo' for '_positive_logitude'"
-    with pytest.raises(ValueError, match=msg):
-
-        class BadPositiveLongitudeCustomGeodetic(BaseGeodeticRepresentation):
-            _equatorial_radius = 3000.0 * u.km
-            _flattening = 0.075 * u.dimensionless_unscaled
-            _positive_longitude = "foo"
-
-    assert "badpositivelongitudecustomgeodetic" not in REPRESENTATION_CLASSES
-
-    msg = "Invalid argument 'foo' for '_wrap_angle'"
-    with pytest.raises(ValueError, match=msg):
+    msg = "Attribute _wrap_angle requires deg units."
+    with pytest.raises(u.UnitTypeError, match=msg):
 
         class BadWrapAngleCustomGeodetic(BaseGeodeticRepresentation):
             _equatorial_radius = 3000.0 * u.km
@@ -235,71 +229,34 @@ def test_from_cartesian_positive_direction_180_360():
         y=[7000.0, 4.0, -5000.0] * u.km,
         z=[5.0, 6000.0, 3000.0] * u.km,
     )
+    lon = [8.99918149e01, 7.63943274e-02, -6.25255684e01] * u.deg
+    lat = [4.11599395e-02, 6.35712722e01, 2.81768159e01] * u.deg
+    height = [3603811.86736981, 3328016.72339126, 2992591.17273747] * u.m
 
     assert_quantity_allclose(
-        (
-            IAUMARS2000GeodeticRepresentationEast180.from_representation(
-                initial_cartesian
-            ).lon.value
-        )
-        * u.deg,
-        -(
-            IAUMARS2000GeodeticRepresentationWest180.from_representation(
-                initial_cartesian
-            ).lon.value
-        )
-        * u.deg,
+        IAUMARS2000GeodeticRepresentationEast180.from_representation(
+            initial_cartesian
+        ).lon,
+        lon,
     )
 
     assert_quantity_allclose(
-        (
-            IAUMARS2000GeodeticRepresentationEast180.from_representation(
-                initial_cartesian
-            ).lon.value
-        )
-        % 180
-        * u.deg,
-        (
-            IAUMARS2000GeodeticRepresentationEast360.from_representation(
-                initial_cartesian
-            ).lon.value
-        )
-        % 180
-        * u.deg,
+        IAUMARS2000GeodeticRepresentationEast360.from_representation(
+            initial_cartesian
+        ).lon,
+        Longitude(lon, wrap_angle=360 * u.deg),
     )
 
     assert_quantity_allclose(
-        (
-            IAUMARS2000GeodeticRepresentationEast180.from_representation(
-                initial_cartesian
-            ).lon.value
-        )
-        % 180
-        * u.deg,
-        (
-            360
-            - (
-                IAUMARS2000GeodeticRepresentationWest360.from_representation(
-                    initial_cartesian
-                ).lon.value
-            )
-        )
-        % 180
-        * u.deg,
+        IAUMARS2000GeodeticRepresentationWest360.from_representation(
+            initial_cartesian
+        ).lon,
+        Longitude(-lon, wrap_angle=360 * u.deg),
     )
 
     assert_quantity_allclose(
-        (
-            IAUMARS2000GeodeticRepresentationEast360.from_representation(
-                initial_cartesian
-            ).lon.value
-        )
-        * u.deg,
-        (
-            360
-            - IAUMARS2000GeodeticRepresentationWest360.from_representation(
-                initial_cartesian
-            ).lon.value
-        )
-        * u.deg,
+        IAUMARS2000GeodeticRepresentationEast360.from_representation(
+            initial_cartesian
+        ).lon,
+        Longitude(lon, wrap_angle=360 * u.deg),
     )
