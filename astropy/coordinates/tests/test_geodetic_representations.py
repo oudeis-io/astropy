@@ -63,6 +63,13 @@ class IAUMARS2000BodycentricRepresentation(BaseBodycentricRepresentation):
     _flattening = 0.5886007555512007 * u.percent
 
 
+class IAUMARS2000BodycentricRepresentationWest(
+    WestLongitudeMixin, BaseBodycentricRepresentation
+):
+    _equatorial_radius = 3396190.0 * u.m
+    _flattening = 0.5886007555512007 * u.percent
+
+
 @pytest.mark.parametrize(
     "geodeticrepresentation",
     [
@@ -71,6 +78,7 @@ class IAUMARS2000BodycentricRepresentation(BaseBodycentricRepresentation):
         IAUMARS2000GeodeticRepresentationEast360,
         IAUMARS2000GeodeticRepresentationWest360,
         IAUMARS2000BodycentricRepresentation,
+        IAUMARS2000BodycentricRepresentationWest,
     ],
 )
 def test_cartesian_geodetic_roundtrip(geodeticrepresentation):
@@ -96,6 +104,7 @@ def test_cartesian_geodetic_roundtrip(geodeticrepresentation):
         IAUMARS2000GeodeticRepresentationEast360,
         IAUMARS2000GeodeticRepresentationWest360,
         IAUMARS2000BodycentricRepresentation,
+        IAUMARS2000BodycentricRepresentationWest,
     ],
 )
 def test_geodetic_cartesian_roundtrip(geodeticrepresentation):
