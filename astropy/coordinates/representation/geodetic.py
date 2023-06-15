@@ -13,33 +13,18 @@ from .cartesian import CartesianRepresentation
 
 class WestLongitudeMixin:
     def to_cartesian(self):
-        self.lon = self.lon.value
-        return super().to_cartesian()
+        cartesian = super().to_cartesian()
+        np.negative(cartesian._y, out=cartesian._y)
+        return cartesian
 
     @classmethod
     def from_cartesian(cls, cart):
         angular = super().from_cartesian(cart)
-        return cls(
-            Longitude(
-                -1 * angular.lon.value,
-                u.deg,
-                wrap_angle=angular.lon.wrap_angle,
-                copy=False,
-            ),
-            angular.lat.to(u.deg),
-            angular.height,
-            copy=False,
-        )
-
-    @property
-    def lon(self):
-        return self._lon
-
-    @lon.setter
-    def lon(self, value):
-        self._lon = Longitude(
-            -1 * value, u.deg, wrap_angle=self._lon.wrap_angle, copy=False
-        )
+        lon = angular._lon
+        np.negative(lon, out=lon)
+        if lon.wrap_angle != 180 * u.deg:
+            lon._wrap_at(lon.wrap_angle)
+        return angular
 
 
 ELLIPSOIDS = {}
@@ -194,24 +179,22 @@ class BaseBodycentricRepresentation(BaseRepresentation):
         Converts bodycentric coordinates to 3D rectangular (geocentric)
         cartesian coordinates.
         """
-        x_spheroid = self._equatorial_radius * np.cos(self.lat) * np.cos(self.lon)
-        y_spheroid = self._equatorial_radius * np.cos(self.lat) * np.sin(self.lon)
-        z_spheroid = (self._equatorial_radius * (1 - self._flattening)) * np.sin(
-            self.lat
-        )
+        coslat = np.cos(self.lat)
+        sinlat = np.sin(self.lat)
+        coslon = np.cos(self.lon)
+        sinlon = np.sin(self.lon)
+        x_spheroid = self._equatorial_radius * coslat * coslon
+        y_spheroid = self._equatorial_radius * coslat * sinlon
+        z_spheroid = self._equatorial_radius * (1 - self._flattening) * sinlat
         r = (
-            np.sqrt(
-                x_spheroid * x_spheroid
-                + y_spheroid * y_spheroid
-                + z_spheroid * z_spheroid
-            )
+            self._equatorial_radius
+            * np.sqrt(coslat**2 + ((1 - self._flattening) * sinlat) ** 2)
             + self.height
         )
-        x = r * np.cos(self.lon) * np.cos(self.lat)
-        y = r * np.sin(self.lon) * np.cos(self.lat)
-        z = r * np.sin(self.lat)
-        xyz = np.stack([x, y, z], axis=1) << u.m
-        return CartesianRepresentation(xyz, xyz_axis=-1, copy=False)
+        x = r * coslon * coslat
+        y = r * sinlon * coslat
+        z = r * sinlat
+        return CartesianRepresentation(x=x, y=y, z=z, copy=False)
 
     @classmethod
     def from_cartesian(cls, cart):
@@ -219,28 +202,15 @@ class BaseBodycentricRepresentation(BaseRepresentation):
         Converts 3D rectangular cartesian coordinates (assumed geocentric) to
         bodycentric coordinates.
         """
-        xyz = cart.get_xyz()
-        # Compute planetocentric latitude
-        p = np.sqrt(xyz[0] * xyz[0] + xyz[1] * xyz[1])
-        d = np.sqrt(xyz[0] * xyz[0] + xyz[1] * xyz[1] + xyz[2] * xyz[2])
-        lat = np.where(
-            p != 0.0,
-            np.arctan(xyz[2] / p),
-            np.sign(xyz[2]) * 0.5 * np.pi * u.radian,
-        )
+        # Compute bodycentric latitude
+        p = np.hypot(cart.x, cart.y)
+        d = np.hypot(p, cart.z)
+        lat = np.arctan2(cart.z, p)
         p_spheroid = cls._equatorial_radius * np.cos(lat)
         z_spheroid = (cls._equatorial_radius * (1 - cls._flattening)) * np.sin(lat)
-        r_spheroid = np.sqrt(p_spheroid * p_spheroid + z_spheroid * z_spheroid)
-        height = np.where(
-            p_spheroid != 0.0,
-            (d - r_spheroid),
-            (np.abs(xyz[2]) - np.abs(z_spheroid)),
-        )
-        lon = np.where(
-            xyz[0] != 0.0,
-            np.arctan(xyz[1] / xyz[0]),
-            np.sign(xyz[1]) * 0.5 * np.pi * u.radian,
-        )
+        r_spheroid = np.hypot(p_spheroid, z_spheroid)
+        height = d - r_spheroid
+        lon = np.arctan2(cart.y, cart.x)
         return cls(
             Longitude(lon << u.deg, wrap_angle=cls._wrap_angle),
             Latitude(lat << u.deg),
