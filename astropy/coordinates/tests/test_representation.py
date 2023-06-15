@@ -1870,7 +1870,7 @@ class TestCartesianRepresentationWithDifferential:
                 # TODO: Converting a CartesianDifferential to a
                 #       RadialDifferential fails, even on `main`
                 continue
-            elif True:
+            elif "geodetic" in name or "bodycentric" in name:
                 # TODO: spheroidal representations (geodetic or bodycentric)
                 # do not have differentials yet
                 continue
