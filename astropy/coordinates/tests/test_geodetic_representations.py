@@ -179,56 +179,98 @@ def test_geodetic_to_geocentric():
     vvd(xyz[2], -3040908.6861467111, 1e-7, "eraGd2gc", "2/3", status)
 
 
-def test_default_height_is_zero():
-    gd = WGS84GeodeticRepresentation(10 * u.deg, 20 * u.deg)
+@pytest.mark.parametrize(
+    "representation",
+    [
+        WGS84GeodeticRepresentation,
+        IAUMARS2000BodycentricRepresentation,
+    ],
+)
+def test_default_height_is_zero(representation):
+    gd = representation(10 * u.deg, 20 * u.deg)
     assert gd.lon == 10 * u.deg
     assert gd.lat == 20 * u.deg
     assert gd.height == 0 * u.m
 
 
-def test_non_angle_error():
-    with pytest.raises(u.UnitTypeError):
-        WGS84GeodeticRepresentation(20 * u.m, 20 * u.deg, 20 * u.m)
+@pytest.mark.parametrize(
+    "representation",
+    [
+        WGS84GeodeticRepresentation,
+        IAUMARS2000BodycentricRepresentation,
+    ],
+)
+def test_non_angle_error(representation):
+    with pytest.raises(u.UnitTypeError, match="require units equivalent to 'rad'"):
+        representation(20 * u.m, 20 * u.deg, 20 * u.m)
 
 
-def test_non_length_error():
+@pytest.mark.parametrize(
+    "representation",
+    [
+        WGS84GeodeticRepresentation,
+        IAUMARS2000BodycentricRepresentation,
+    ],
+)
+def test_non_length_error(representation):
     with pytest.raises(u.UnitTypeError, match="units of length"):
-        WGS84GeodeticRepresentation(10 * u.deg, 20 * u.deg, 30)
+        representation(10 * u.deg, 20 * u.deg, 30)
 
 
-def test_geodetic_subclass_bad_ellipsoid():
+@pytest.mark.parametrize(
+    "baserepresentation",
+    [
+        BaseGeodeticRepresentation,
+        BaseBodycentricRepresentation,
+    ],
+)
+def test_subclass_bad_ellipsoid(baserepresentation):
     # Test incomplete initialization.
 
     msg = "module 'erfa' has no attribute 'foo'"
     with pytest.raises(AttributeError, match=msg):
 
-        class InvalidCustomGeodeticEllipsoid(BaseGeodeticRepresentation):
+        class InvalidCustomEllipsoid(baserepresentation):
             _ellipsoid = "foo"
 
     assert "foo" not in ELLIPSOIDS
-    assert "invalidcustomgeodeticellipsoid" not in REPRESENTATION_CLASSES
+    assert "invalidcustomellipsoid" not in REPRESENTATION_CLASSES
 
 
-def test_geodetic_subclass_missing_equatorial_radius():
-    msg = "MissingCustomGeodeticAttribute requires '_ellipsoid' or '_equatorial_radius' and '_flattening'."
+@pytest.mark.parametrize(
+    "baserepresentation",
+    [
+        BaseGeodeticRepresentation,
+        BaseBodycentricRepresentation,
+    ],
+)
+def test_geodetic__subclass_missing_equatorial_radius(baserepresentation):
+    msg = "requires '_ellipsoid' or '_equatorial_radius' and '_flattening'."
     with pytest.raises(AttributeError, match=msg):
 
-        class MissingCustomGeodeticAttribute(BaseGeodeticRepresentation):
+        class MissingCustomAttribute(baserepresentation):
             _flattening = 0.075 * u.dimensionless_unscaled
 
-    assert "missingcustomgeodeticattribute" not in REPRESENTATION_CLASSES
+    assert "missingcustomattribute" not in REPRESENTATION_CLASSES
 
 
-def test_geodetic_subclass_bad_attributes():
-    msg = "Attribute _wrap_angle requires deg units."
+@pytest.mark.parametrize(
+    "baserepresentation",
+    [
+        BaseGeodeticRepresentation,
+        BaseBodycentricRepresentation,
+    ],
+)
+def test_subclass_bad_attributes(baserepresentation):
+    msg = "Attribute _wrap_angle requires angular units."
     with pytest.raises(u.UnitTypeError, match=msg):
 
-        class BadWrapAngleCustomGeodetic(BaseGeodeticRepresentation):
+        class BadWrapAngleCustom(baserepresentation):
             _equatorial_radius = 3000.0 * u.km
             _flattening = 0.075 * u.dimensionless_unscaled
             _wrap_angle = "foo"
 
-    assert "badwrapanglecustomgeodetic" not in REPRESENTATION_CLASSES
+    assert "badwrapanglecustom" not in REPRESENTATION_CLASSES
 
 
 def test_from_cartesian_positive_direction_180_360():

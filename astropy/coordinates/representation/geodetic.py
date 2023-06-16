@@ -12,6 +12,10 @@ from .cartesian import CartesianRepresentation
 
 
 class WestLongitudeMixin:
+    """
+    Mixin for west positive longitude representation.
+    """
+
     def to_cartesian(self):
         cartesian = super().to_cartesian()
         np.negative(cartesian._y, out=cartesian._y)
@@ -63,8 +67,7 @@ class BaseGeodeticRepresentation(BaseRepresentation):
     respectively), or alternatively an ``_ellipsoid`` attribute to the relevant ERFA
     index (as passed in to `erfa.eform`).
     Longitudes are east positive and span from -180 to 180 degrees by default.
-    They can be made west positive setting ``_positive_longitude='west'``, or spanning
-    from 0 to 360 degrees setting ``_wrap_angle=360 * u.deg``.
+    They can be made spanning from 0 to 360 degrees setting ``_wrap_angle=360 * u.deg``.
     """
 
     attr_classes = {"lon": Longitude, "lat": Latitude, "height": u.Quantity}
@@ -86,18 +89,13 @@ class BaseGeodeticRepresentation(BaseRepresentation):
         if not hasattr(
             cls._wrap_angle, "unit"
         ) or not cls._wrap_angle.unit.is_equivalent(u.deg):
-            raise u.UnitTypeError("Attribute _wrap_angle requires deg units.")
+            raise u.UnitTypeError("Attribute _wrap_angle requires angular units.")
         super().__init_subclass__(**kwargs)
 
     def __init__(self, lon, lat=None, height=None, copy=True):
         if height is None and not isinstance(lon, self.__class__):
             height = 0 << u.m
 
-        if not lon.unit.is_equivalent(u.deg) or not lat.unit.is_equivalent(u.deg):
-            raise u.UnitTypeError(
-                f"{self.__class__.__name__} requires lat and lon with units of angle."
-            )
-        lon = Longitude(lon << u.deg, wrap_angle=self._wrap_angle)
         super().__init__(lon, lat, height, copy=copy)
         if not self.height.unit.is_equivalent(u.m):
             raise u.UnitTypeError(
@@ -129,8 +127,8 @@ class BaseGeodeticRepresentation(BaseRepresentation):
             cls._equatorial_radius, cls._flattening, cart.get_xyz(xyz_axis=-1)
         )
         return cls(
-            Longitude(lon << u.deg, wrap_angle=cls._wrap_angle),
-            Latitude(lat << u.deg),
+            Longitude(lon, wrap_angle=cls._wrap_angle),
+            lat,
             height,
             copy=False,
         )
@@ -138,7 +136,15 @@ class BaseGeodeticRepresentation(BaseRepresentation):
 
 @format_doc(geodetic_base_doc)
 class BaseBodycentricRepresentation(BaseRepresentation):
-    """Representation of points in bodycentric 3D coordinates."""
+    """Representation of points in bodycentric 3D coordinates.
+
+    Subclasses need to set attributes ``_equatorial_radius`` and ``_flattening``
+    to quantities holding correct values (with units of length and dimensionless,
+    respectively), or alternatively an ``_ellipsoid`` attribute to the relevant ERFA
+    index (as passed in to `erfa.eform`).
+    Longitudes are east positive and span from -180 to 180 degrees by default.
+    They can be made spanning from 0 to 360 degrees setting ``_wrap_angle=360 * u.deg``.
+    """
 
     attr_classes = {"lon": Longitude, "lat": Latitude, "height": u.Quantity}
     _wrap_angle = 180 * u.deg
@@ -156,6 +162,10 @@ class BaseBodycentricRepresentation(BaseRepresentation):
             raise AttributeError(
                 f"{cls.__name__} requires '_ellipsoid' or '_equatorial_radius' and '_flattening'."
             )
+        if not hasattr(
+            cls._wrap_angle, "unit"
+        ) or not cls._wrap_angle.unit.is_equivalent(u.deg):
+            raise u.UnitTypeError("Attribute _wrap_angle requires angular units.")
         super().__init_subclass__(**kwargs)
 
     def __init__(self, lon, lat=None, height=None, copy=True):
@@ -166,12 +176,6 @@ class BaseBodycentricRepresentation(BaseRepresentation):
         if not self.height.unit.is_equivalent(u.m):
             raise u.UnitTypeError(
                 f"{self.__class__.__name__} requires height with units of length."
-            )
-        if not self.lon.unit.is_equivalent(u.deg) or not self.lat.unit.is_equivalent(
-            u.deg
-        ):
-            raise u.UnitTypeError(
-                f"{self.__class__.__name__} requires lat and lon with units of angle."
             )
 
     def to_cartesian(self):
@@ -212,8 +216,8 @@ class BaseBodycentricRepresentation(BaseRepresentation):
         height = d - r_spheroid
         lon = np.arctan2(cart.y, cart.x)
         return cls(
-            Longitude(lon << u.deg, wrap_angle=cls._wrap_angle),
-            Latitude(lat << u.deg),
+            Longitude(lon, wrap_angle=cls._wrap_angle),
+            lat,
             height,
             copy=False,
         )
