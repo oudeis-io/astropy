@@ -32,6 +32,20 @@ class CustomGeodetic(BaseGeodeticRepresentation):
     _equatorial_radius = 4000000.0 * u.m
 
 
+class CustomSphericGeodetic(BaseGeodeticRepresentation):
+    _flattening = 0.0
+    _equatorial_radius = 4000000.0 * u.m
+
+
+class CustomSphericBodycentric(BaseBodycentricRepresentation):
+    _flattening = 0.0
+    _equatorial_radius = 4000000.0 * u.m
+
+
+class WGS84BodycentricRepresentation(BaseBodycentricRepresentation):
+    _ellipsoid = "WGS84"
+
+
 class IAUMARS2000GeodeticRepresentationEast180(BaseGeodeticRepresentation):
     _equatorial_radius = 3396190.0 * u.m
     _flattening = 0.5886007555512007 * u.percent
@@ -70,11 +84,24 @@ class IAUMARS2000BodycentricRepresentationWest(
     _flattening = 0.5886007555512007 * u.percent
 
 
+def test_geodetic_bodycentric_equivalence_spherical_bodies():
+    initial_cartesian = CartesianRepresentation(
+        x=[1, 3000.0] * u.km, y=[7000.0, 4.0] * u.km, z=[5.0, 6000.0] * u.km
+    )
+
+    gd_transformed = CustomSphericGeodetic.from_representation(initial_cartesian)
+    bc_transformed = CustomSphericBodycentric.from_representation(initial_cartesian)
+    assert_quantity_allclose(gd_transformed.lon, bc_transformed.lon)
+    assert_quantity_allclose(gd_transformed.lat, bc_transformed.lat)
+    assert_quantity_allclose(gd_transformed.height, bc_transformed.height)
+
+
 @pytest.mark.parametrize(
     "geodeticrepresentation",
     [
         CustomGeodetic,
         WGS84GeodeticRepresentation,
+        WGS84BodycentricRepresentation,
         IAUMARS2000GeodeticRepresentationEast360,
         IAUMARS2000GeodeticRepresentationWest360,
         IAUMARS2000BodycentricRepresentation,
@@ -101,6 +128,7 @@ def test_cartesian_geodetic_roundtrip(geodeticrepresentation):
     [
         CustomGeodetic,
         WGS84GeodeticRepresentation,
+        WGS84BodycentricRepresentation,
         IAUMARS2000GeodeticRepresentationEast360,
         IAUMARS2000GeodeticRepresentationWest360,
         IAUMARS2000BodycentricRepresentation,
@@ -303,11 +331,4 @@ def test_from_cartesian_positive_direction_180_360():
             initial_cartesian
         ).lon,
         Longitude(-lon, wrap_angle=360 * u.deg),
-    )
-
-    assert_quantity_allclose(
-        IAUMARS2000GeodeticRepresentationEast360.from_representation(
-            initial_cartesian
-        ).lon,
-        Longitude(lon, wrap_angle=360 * u.deg),
     )
