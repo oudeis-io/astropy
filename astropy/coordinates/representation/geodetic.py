@@ -150,17 +150,12 @@ class BaseBodycentricRepresentation(BaseRepresentation):
     _wrap_angle = 180 * u.deg
 
     def __init_subclass__(cls, **kwargs):
-        if "_ellipsoid" in cls.__dict__:
-            equatorial_radius, flattening = erfa.eform(getattr(erfa, cls._ellipsoid))
-            cls._equatorial_radius = equatorial_radius * u.m
-            cls._flattening = flattening * u.dimensionless_unscaled
-            ELLIPSOIDS[cls._ellipsoid] = cls
-        elif (
+        if (
             "_equatorial_radius" not in cls.__dict__
             or "_flattening" not in cls.__dict__
         ):
             raise AttributeError(
-                f"{cls.__name__} requires '_ellipsoid' or '_equatorial_radius' and '_flattening'."
+                f"{cls.__name__} requires '_equatorial_radius' and '_flattening'."
             )
         if not hasattr(
             cls._wrap_angle, "unit"

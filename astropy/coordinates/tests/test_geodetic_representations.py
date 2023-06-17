@@ -42,10 +42,6 @@ class CustomSphericBodycentric(BaseBodycentricRepresentation):
     _equatorial_radius = 4000000.0 * u.m
 
 
-class WGS84BodycentricRepresentation(BaseBodycentricRepresentation):
-    _ellipsoid = "WGS84"
-
-
 class IAUMARS2000GeodeticRepresentationEast180(BaseGeodeticRepresentation):
     _equatorial_radius = 3396190.0 * u.m
     _flattening = 0.5886007555512007 * u.percent
@@ -101,7 +97,6 @@ def test_geodetic_bodycentric_equivalence_spherical_bodies():
     [
         CustomGeodetic,
         WGS84GeodeticRepresentation,
-        WGS84BodycentricRepresentation,
         IAUMARS2000GeodeticRepresentationEast360,
         IAUMARS2000GeodeticRepresentationWest360,
         IAUMARS2000BodycentricRepresentation,
@@ -128,7 +123,6 @@ def test_cartesian_geodetic_roundtrip(geodeticrepresentation):
     [
         CustomGeodetic,
         WGS84GeodeticRepresentation,
-        WGS84BodycentricRepresentation,
         IAUMARS2000GeodeticRepresentationEast360,
         IAUMARS2000GeodeticRepresentationWest360,
         IAUMARS2000BodycentricRepresentation,
@@ -245,20 +239,13 @@ def test_non_length_error(representation):
         representation(10 * u.deg, 20 * u.deg, 30)
 
 
-@pytest.mark.parametrize(
-    "baserepresentation",
-    [
-        BaseGeodeticRepresentation,
-        BaseBodycentricRepresentation,
-    ],
-)
-def test_subclass_bad_ellipsoid(baserepresentation):
+def test_subclass_bad_ellipsoid():
     # Test incomplete initialization.
 
     msg = "module 'erfa' has no attribute 'foo'"
     with pytest.raises(AttributeError, match=msg):
 
-        class InvalidCustomEllipsoid(baserepresentation):
+        class InvalidCustomEllipsoid(BaseGeodeticRepresentation):
             _ellipsoid = "foo"
 
     assert "foo" not in ELLIPSOIDS
@@ -273,7 +260,7 @@ def test_subclass_bad_ellipsoid(baserepresentation):
     ],
 )
 def test_geodetic__subclass_missing_equatorial_radius(baserepresentation):
-    msg = "requires '_ellipsoid' or '_equatorial_radius' and '_flattening'."
+    msg = "'_equatorial_radius' and '_flattening'."
     with pytest.raises(AttributeError, match=msg):
 
         class MissingCustomAttribute(baserepresentation):
