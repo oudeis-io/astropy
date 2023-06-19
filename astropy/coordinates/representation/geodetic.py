@@ -26,8 +26,7 @@ class WestLongitudeMixin:
         angular = super().from_cartesian(cart)
         lon = angular._lon
         np.negative(lon, out=lon)
-        if lon.wrap_angle != 180 * u.deg:
-            lon._wrap_at(lon.wrap_angle)
+        lon._wrap_at(lon.wrap_angle)
         return angular
 
 
@@ -86,9 +85,7 @@ class BaseGeodeticRepresentation(BaseRepresentation):
             raise AttributeError(
                 f"{cls.__name__} requires '_ellipsoid' or '_equatorial_radius' and '_flattening'."
             )
-        if not hasattr(
-            cls._wrap_angle, "unit"
-        ) or not cls._wrap_angle.unit.is_equivalent(u.deg):
+        if not u.Quantity(cls._wrap_angle).unit.is_equivalent(u.deg):
             raise u.UnitTypeError("Attribute _wrap_angle requires angular units.")
         super().__init_subclass__(**kwargs)
 
@@ -142,12 +139,12 @@ class BaseBodycentricRepresentation(BaseRepresentation):
     to quantities holding correct values (with units of length and dimensionless,
     respectively), or alternatively an ``_ellipsoid`` attribute to the relevant ERFA
     index (as passed in to `erfa.eform`).
-    Longitudes are east positive and span from -180 to 180 degrees by default.
-    They can be made spanning from 0 to 360 degrees setting ``_wrap_angle=360 * u.deg``.
+    Longitudes are east positive and span from 0 to 360 degrees by default.
+    They can be made spanning from -180 to 180 degrees setting ``_wrap_angle=180 * u.deg``.
     """
 
     attr_classes = {"lon": Longitude, "lat": Latitude, "height": u.Quantity}
-    _wrap_angle = 180 * u.deg
+    _wrap_angle = 360 * u.deg
 
     def __init_subclass__(cls, **kwargs):
         if (
@@ -157,9 +154,7 @@ class BaseBodycentricRepresentation(BaseRepresentation):
             raise AttributeError(
                 f"{cls.__name__} requires '_equatorial_radius' and '_flattening'."
             )
-        if not hasattr(
-            cls._wrap_angle, "unit"
-        ) or not cls._wrap_angle.unit.is_equivalent(u.deg):
+        if not u.Quantity(cls._wrap_angle).unit.is_equivalent(u.deg):
             raise u.UnitTypeError("Attribute _wrap_angle requires angular units.")
         super().__init_subclass__(**kwargs)
 

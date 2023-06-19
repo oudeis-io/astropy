@@ -259,7 +259,7 @@ def test_subclass_bad_ellipsoid():
         BaseBodycentricRepresentation,
     ],
 )
-def test_geodetic__subclass_missing_equatorial_radius(baserepresentation):
+def test_geodetic_subclass_missing_equatorial_radius(baserepresentation):
     msg = "'_equatorial_radius' and '_flattening'."
     with pytest.raises(AttributeError, match=msg):
 
@@ -283,7 +283,7 @@ def test_subclass_bad_attributes(baserepresentation):
         class BadWrapAngleCustom(baserepresentation):
             _equatorial_radius = 3000.0 * u.km
             _flattening = 0.075 * u.dimensionless_unscaled
-            _wrap_angle = "foo"
+            _wrap_angle = 35
 
     assert "badwrapanglecustom" not in REPRESENTATION_CLASSES
 
