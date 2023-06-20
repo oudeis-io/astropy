@@ -43,6 +43,8 @@ from astropy.utils.exceptions import AstropyDeprecationWarning, AstropyWarning
 
 from .test_representation import unitphysics  # this fixture is used below  # noqa: F401
 
+from .test_geodetic_representations import IAUMARS2000BodycentricRepresentation
+
 
 def setup_function(func):
     """Copy original 'REPRESENTATIONCLASSES' as attribute in function."""
@@ -831,12 +833,11 @@ def test_basebodyframe_attributes():
     assert wgs84.height == 0.0 * u.m
     assert wgs84.obstime == None
 
-    class WGS84BodyFrame360(BodyBaseCoordinateFrame):
-        representation = WGS84GeodeticRepresentation
-        wrap_angle = 360.0 * u.deg
+    class IAUMARS2000BodyFrame(BodyBaseCoordinateFrame):
+        representation = IAUMARS2000BodycentricRepresentation
 
-    wgs84 = WGS84BodyFrame360(325 * u.deg, 2 * u.deg)
-    assert wgs84.lon == 325 * u.deg
+    mars2000 = IAUMARS2000BodyFrame(325 * u.deg, 2 * u.deg)
+    assert mars2000.lon == 325 * u.deg
 
 
 def test_itrs_earth_location():

@@ -50,3 +50,8 @@ class BodyBaseCoordinateFrame(BaseCoordinateFrame):
 
     obstime = TimeAttribute(default=None)
     object_name = None
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.has_data:
+            self.data.lon.wrap_angle = self.representation._wrap_angle
