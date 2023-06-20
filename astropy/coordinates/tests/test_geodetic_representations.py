@@ -4,10 +4,13 @@
 import pytest
 
 from astropy import units as u
+from astropy.coordinates.angles import Longitude
 from astropy.coordinates.representation import (
     CartesianRepresentation,
     REPRESENTATION_CLASSES,
     BaseGeodeticRepresentation,
+    BaseBodycentricRepresentation,
+    WestLongitudeMixin,
     GRS80GeodeticRepresentation,
     WGS72GeodeticRepresentation,
     WGS84GeodeticRepresentation,
@@ -29,34 +32,64 @@ class CustomGeodetic(BaseGeodeticRepresentation):
     _equatorial_radius = 4000000.0 * u.m
 
 
+class CustomSphericGeodetic(BaseGeodeticRepresentation):
+    _flattening = 0.0
+    _equatorial_radius = 4000000.0 * u.m
+
+
+class CustomSphericBodycentric(BaseBodycentricRepresentation):
+    _flattening = 0.0
+    _equatorial_radius = 4000000.0 * u.m
+
+
 class IAUMARS2000GeodeticRepresentationEast180(BaseGeodeticRepresentation):
     _equatorial_radius = 3396190.0 * u.m
     _flattening = 0.5886007555512007 * u.percent
 
 
-class IAUMARS2000GeodeticRepresentationWest180(BaseGeodeticRepresentation):
+class IAUMARS2000GeodeticRepresentationWest180(
+    WestLongitudeMixin, BaseGeodeticRepresentation
+):
     _equatorial_radius = 3396190.0 * u.m
     _flattening = 0.5886007555512007 * u.percent
-    _positive_longitude = "west"
 
 
 class IAUMARS2000GeodeticRepresentationEast360(BaseGeodeticRepresentation):
     _equatorial_radius = 3396190.0 * u.m
     _flattening = 0.5886007555512007 * u.percent
-    _wrap_angle = 360
+    _wrap_angle = 360 * u.deg
 
 
-class IAUMARS2000GeodeticRepresentationWest360(BaseGeodeticRepresentation):
+class IAUMARS2000GeodeticRepresentationWest360(
+    WestLongitudeMixin, BaseGeodeticRepresentation
+):
     _equatorial_radius = 3396190.0 * u.m
     _flattening = 0.5886007555512007 * u.percent
-    _positive_longitude = "west"
-    _wrap_angle = 360
+    _wrap_angle = 360 * u.deg
 
 
-class IAUMARS2000GeodeticRepresentationOcentric(BaseGeodeticRepresentation):
+class IAUMARS2000BodycentricRepresentation(BaseBodycentricRepresentation):
     _equatorial_radius = 3396190.0 * u.m
     _flattening = 0.5886007555512007 * u.percent
-    _ographic = False
+
+
+class IAUMARS2000BodycentricRepresentationWest(
+    WestLongitudeMixin, BaseBodycentricRepresentation
+):
+    _equatorial_radius = 3396190.0 * u.m
+    _flattening = 0.5886007555512007 * u.percent
+
+
+def test_geodetic_bodycentric_equivalence_spherical_bodies():
+    initial_cartesian = CartesianRepresentation(
+        x=[1, 3000.0] * u.km, y=[7000.0, 4.0] * u.km, z=[5.0, 6000.0] * u.km
+    )
+
+    gd_transformed = CustomSphericGeodetic.from_representation(initial_cartesian)
+    bc_transformed = CustomSphericBodycentric.from_representation(initial_cartesian)
+    assert_quantity_allclose(gd_transformed.lon, bc_transformed.lon)
+    assert_quantity_allclose(gd_transformed.lat, bc_transformed.lat)
+    assert_quantity_allclose(gd_transformed.height, bc_transformed.height)
 
 
 @pytest.mark.parametrize(
@@ -66,7 +99,8 @@ class IAUMARS2000GeodeticRepresentationOcentric(BaseGeodeticRepresentation):
         WGS84GeodeticRepresentation,
         IAUMARS2000GeodeticRepresentationEast360,
         IAUMARS2000GeodeticRepresentationWest360,
-        IAUMARS2000GeodeticRepresentationOcentric,
+        IAUMARS2000BodycentricRepresentation,
+        IAUMARS2000BodycentricRepresentationWest,
     ],
 )
 def test_cartesian_geodetic_roundtrip(geodeticrepresentation):
@@ -91,7 +125,8 @@ def test_cartesian_geodetic_roundtrip(geodeticrepresentation):
         WGS84GeodeticRepresentation,
         IAUMARS2000GeodeticRepresentationEast360,
         IAUMARS2000GeodeticRepresentationWest360,
-        IAUMARS2000GeodeticRepresentationOcentric,
+        IAUMARS2000BodycentricRepresentation,
+        IAUMARS2000BodycentricRepresentationWest,
     ],
 )
 def test_geodetic_cartesian_roundtrip(geodeticrepresentation):
@@ -166,66 +201,91 @@ def test_geodetic_to_geocentric():
     vvd(xyz[2], -3040908.6861467111, 1e-7, "eraGd2gc", "2/3", status)
 
 
-def test_default_height_is_zero():
-    gd = WGS84GeodeticRepresentation(10 * u.deg, 20 * u.deg)
+@pytest.mark.parametrize(
+    "representation",
+    [
+        WGS84GeodeticRepresentation,
+        IAUMARS2000BodycentricRepresentation,
+    ],
+)
+def test_default_height_is_zero(representation):
+    gd = representation(10 * u.deg, 20 * u.deg)
     assert gd.lon == 10 * u.deg
     assert gd.lat == 20 * u.deg
     assert gd.height == 0 * u.m
 
 
-def test_non_angle_error():
-    with pytest.raises(u.UnitTypeError):
-        WGS84GeodeticRepresentation(20 * u.m, 20 * u.deg, 20 * u.m)
+@pytest.mark.parametrize(
+    "representation",
+    [
+        WGS84GeodeticRepresentation,
+        IAUMARS2000BodycentricRepresentation,
+    ],
+)
+def test_non_angle_error(representation):
+    with pytest.raises(u.UnitTypeError, match="require units equivalent to 'rad'"):
+        representation(20 * u.m, 20 * u.deg, 20 * u.m)
 
 
-def test_non_length_error():
+@pytest.mark.parametrize(
+    "representation",
+    [
+        WGS84GeodeticRepresentation,
+        IAUMARS2000BodycentricRepresentation,
+    ],
+)
+def test_non_length_error(representation):
     with pytest.raises(u.UnitTypeError, match="units of length"):
-        WGS84GeodeticRepresentation(10 * u.deg, 20 * u.deg, 30)
+        representation(10 * u.deg, 20 * u.deg, 30)
 
 
-def test_geodetic_subclass_bad_ellipsoid():
+def test_subclass_bad_ellipsoid():
     # Test incomplete initialization.
 
     msg = "module 'erfa' has no attribute 'foo'"
     with pytest.raises(AttributeError, match=msg):
 
-        class InvalidCustomGeodeticEllipsoid(BaseGeodeticRepresentation):
+        class InvalidCustomEllipsoid(BaseGeodeticRepresentation):
             _ellipsoid = "foo"
 
     assert "foo" not in ELLIPSOIDS
-    assert "invalidcustomgeodeticellipsoid" not in REPRESENTATION_CLASSES
+    assert "invalidcustomellipsoid" not in REPRESENTATION_CLASSES
 
 
-def test_geodetic_subclass_missing_equatorial_radius():
-    msg = "MissingCustomGeodeticAttribute requires '_ellipsoid' or '_equatorial_radius' and '_flattening'."
+@pytest.mark.parametrize(
+    "baserepresentation",
+    [
+        BaseGeodeticRepresentation,
+        BaseBodycentricRepresentation,
+    ],
+)
+def test_geodetic_subclass_missing_equatorial_radius(baserepresentation):
+    msg = "'_equatorial_radius' and '_flattening'."
     with pytest.raises(AttributeError, match=msg):
 
-        class MissingCustomGeodeticAttribute(BaseGeodeticRepresentation):
+        class MissingCustomAttribute(baserepresentation):
             _flattening = 0.075 * u.dimensionless_unscaled
 
-    assert "missingcustomgeodeticattribute" not in REPRESENTATION_CLASSES
+    assert "missingcustomattribute" not in REPRESENTATION_CLASSES
 
 
-def test_geodetic_subclass_bad_attributes():
-    msg = "Invalid argument 'foo' for '_positive_logitude'"
-    with pytest.raises(ValueError, match=msg):
+@pytest.mark.parametrize(
+    "baserepresentation",
+    [
+        BaseGeodeticRepresentation,
+        BaseBodycentricRepresentation,
+    ],
+)
+def test_subclass_bad_attributes(baserepresentation):
+    msg = "Attribute _wrap_angle requires angular units."
+    with pytest.raises(u.UnitTypeError, match=msg):
 
-        class BadPositiveLongitudeCustomGeodetic(BaseGeodeticRepresentation):
+        class BadWrapAngleCustom(baserepresentation):
             _equatorial_radius = 3000.0 * u.km
             _flattening = 0.075 * u.dimensionless_unscaled
-            _positive_longitude = "foo"
+            _wrap_angle = 35
 
-    assert "badpositivelongitudecustomgeodetic" not in REPRESENTATION_CLASSES
-
-    msg = "Invalid argument 'foo' for '_wrap_angle'"
-    with pytest.raises(ValueError, match=msg):
-
-        class BadWrapAngleCustomGeodetic(BaseGeodeticRepresentation):
-            _equatorial_radius = 3000.0 * u.km
-            _flattening = 0.075 * u.dimensionless_unscaled
-            _wrap_angle = "foo"
-
-    assert "badwrapanglecustomgeodetic" not in REPRESENTATION_CLASSES
+    assert "badwrapanglecustom" not in REPRESENTATION_CLASSES
 
 
 def test_from_cartesian_positive_direction_180_360():
@@ -235,71 +295,27 @@ def test_from_cartesian_positive_direction_180_360():
         y=[7000.0, 4.0, -5000.0] * u.km,
         z=[5.0, 6000.0, 3000.0] * u.km,
     )
+    lon = [8.99918149e01, 7.63943274e-02, -6.25255684e01] * u.deg
+    lat = [4.11599395e-02, 6.35712722e01, 2.81768159e01] * u.deg
+    height = [3603811.86736981, 3328016.72339126, 2992591.17273747] * u.m
 
     assert_quantity_allclose(
-        (
-            IAUMARS2000GeodeticRepresentationEast180.from_representation(
-                initial_cartesian
-            ).lon.value
-        )
-        * u.deg,
-        -(
-            IAUMARS2000GeodeticRepresentationWest180.from_representation(
-                initial_cartesian
-            ).lon.value
-        )
-        * u.deg,
+        IAUMARS2000GeodeticRepresentationEast180.from_representation(
+            initial_cartesian
+        ).lon,
+        lon,
     )
 
     assert_quantity_allclose(
-        (
-            IAUMARS2000GeodeticRepresentationEast180.from_representation(
-                initial_cartesian
-            ).lon.value
-        )
-        % 180
-        * u.deg,
-        (
-            IAUMARS2000GeodeticRepresentationEast360.from_representation(
-                initial_cartesian
-            ).lon.value
-        )
-        % 180
-        * u.deg,
+        IAUMARS2000GeodeticRepresentationEast360.from_representation(
+            initial_cartesian
+        ).lon,
+        Longitude(lon, wrap_angle=360 * u.deg),
     )
 
     assert_quantity_allclose(
-        (
-            IAUMARS2000GeodeticRepresentationEast180.from_representation(
-                initial_cartesian
-            ).lon.value
-        )
-        % 180
-        * u.deg,
-        (
-            360
-            - (
-                IAUMARS2000GeodeticRepresentationWest360.from_representation(
-                    initial_cartesian
-                ).lon.value
-            )
-        )
-        % 180
-        * u.deg,
-    )
-
-    assert_quantity_allclose(
-        (
-            IAUMARS2000GeodeticRepresentationEast360.from_representation(
-                initial_cartesian
-            ).lon.value
-        )
-        * u.deg,
-        (
-            360
-            - IAUMARS2000GeodeticRepresentationWest360.from_representation(
-                initial_cartesian
-            ).lon.value
-        )
-        * u.deg,
+        IAUMARS2000GeodeticRepresentationWest360.from_representation(
+            initial_cartesian
+        ).lon,
+        Longitude(-lon, wrap_angle=360 * u.deg),
     )
