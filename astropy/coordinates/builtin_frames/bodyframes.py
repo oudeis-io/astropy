@@ -54,4 +54,7 @@ class BodyBaseCoordinateFrame(BaseCoordinateFrame):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if self.has_data:
-            self.data.lon.wrap_angle = self.representation._wrap_angle
+            if hasattr(self, "representation"):
+                self.data.lon.wrap_angle = self.representation._wrap_angle
+            else:
+                self.data.lon.wrap_angle = self.default_representation._wrap_angle

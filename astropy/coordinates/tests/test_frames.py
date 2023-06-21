@@ -835,10 +835,11 @@ def test_basebodyframe_attributes():
     assert wgs84.obstime == None
 
     class IAUMARS2000BodyFrame(BodyBaseCoordinateFrame):
-        representation = IAUMARS2000BodycentricRepresentation
+        default_representation = IAUMARS2000BodycentricRepresentation
 
     mars2000 = IAUMARS2000BodyFrame(325 * u.deg, 2 * u.deg)
     assert mars2000.lon == 325 * u.deg
+    assert mars2000.lon.wrap_angle == IAUMARS2000BodycentricRepresentation._wrap_angle
 
 
 def test_itrs_earth_location():

@@ -3,14 +3,15 @@ r"""
 Create a new coordinate frame class for Mars
 ============================================
 
-This example describes how to subclass and define a custom geodetic
+This example describes how to subclass and define a custom geodetic and bodycentric
 coordinate frame, as discussed in :ref:`astropy:astropy-coordinates-design` and
 :ref:`astropy-coordinates-create-geodetic`.
 
 To do this, first we need to define a subclass of a
-`~astropy.coordinates.BaseGeodeticRepresentation`, then a subclass of
+`~astropy.coordinates.BaseGeodeticRepresentation` and
+`~astropy.coordinates.BaseBodycentricRepresentation`, then a subclass of
 `~astropy.coordinates.BodyBaseCoordinateFrame` using the previous defined
-representation.
+representations.
 
 *By: Chiara Marmo*
 
@@ -37,7 +38,10 @@ plt.style.use(astropy_mpl_style)
 import astropy.units as u
 from astropy.coordinates.builtin_frames.bodyframes import BodyBaseCoordinateFrame
 from astropy.coordinates.representation import CartesianRepresentation
-from astropy.coordinates.representation.geodetic import BaseGeodeticRepresentation
+from astropy.coordinates.representation.geodetic import (
+    BaseBodycentricRepresentation,
+    BaseGeodeticRepresentation,
+)
 
 ##############################################################################
 # The first step is to create a new class, which we'll call
@@ -56,8 +60,7 @@ class MarsBestFitAeroid(BaseGeodeticRepresentation):
 
     _equatorial_radius = 3395.4280 * u.km
     _flattening = 0.5227617843759314 * u.percent
-    _wrap_angle = 360
-
+    _wrap_angle = 360. * u.deg
 
 #############################################################################
 # The new planetary body-fixed reference system will use the previous defined
@@ -79,7 +82,7 @@ mars = MarsCoordinateFrame(lon=np.linspace(0, 2*np.pi, 128)*u.radian,
 # Now let's define a new geodetic representation obtained from MarsBestFitAeroid but
 # described by planetocentric latitudes.
 
-class MarsBestFitOcentricAeroid(BaseGeodeticRepresentation):
+class MarsBestFitOcentricAeroid(BaseBodycentricRepresentation):
     """
     A Spheroidal planetocentric representation of Mars that minimized deviations with
     respect to the areoid following
@@ -89,8 +92,6 @@ class MarsBestFitOcentricAeroid(BaseGeodeticRepresentation):
 
     _equatorial_radius = 3395.4280 * u.km
     _flattening = 0.5227617843759314 * u.percent
-    _wrap_angle = 360
-    _ographic = False
 
 #############################################################################
 # and a related planetary body-fixed reference system.
@@ -114,7 +115,7 @@ class MarsSphere(BaseGeodeticRepresentation):
 
     _equatorial_radius = 3395.4280 * u.km
     _flattening = 0.0 * u.percent
-    _wrap_angle = 360
+    _wrap_angle = 360. * u.deg
 
 #############################################################################
 # and the corresponding reference frame.
