@@ -10,6 +10,7 @@ from astropy.coordinates import (
     CartesianRepresentation,
     SphericalRepresentation,
     BaseGeodeticRepresentation,
+    BaseBodycentricRepresentation,
 )
 from astropy.utils import unbroadcast
 
@@ -127,17 +128,14 @@ def _wcs_to_celestial_frame_builtin(wcs):
         elif ("LN" in xcoord and "LT" in ycoord and "H" not in xcoord) or (
             "LON" in xcoord and "LAT" in ycoord
         ):
-
-            class BodyGeodeticRepresentation(BaseGeodeticRepresentation):
-                _equatorial_radius = (
-                    3000.0 * u.m
-                )  # to be retrieved form radius keywords
-                _flattening = 0.1 * u.percent  # to be retrieved from radius keywords
-
             if "ocentric" in wcs.wcs.name:
-                BodyGeodeticRepresentation._ographic = False
-            frame = BodyBaseCoordinateFrame(obstime=wcs.wcs.dateobs or None)
-            frame.representation = BodyGeodeticRepresentation
+                baserepresentation = BaseBodycentricRepresentation
+            else:
+                baserepresentation = BaseGeodeticRepresentation
+
+            frame = BodyBaseCoordinateFrame(
+                representation_type=baserepresentation, obstime=wcs.wcs.dateobs or None
+            )
         else:
             frame = None
 
@@ -187,10 +185,11 @@ def _celestial_frame_to_wcs_builtin(frame, projection="TAN"):
     elif isinstance(frame, BodyBaseCoordinateFrame):
         xcoord = "LON-"
         ycoord = "LAT-"
-        wcs.wcs.dateobs = frame.obstime.utc.isot
-        if frame.default_representation._ographic is True:
+        if frame.obstime is not None:
+            wcs.wcs.dateobs = frame.obstime.utc.isot
+        if issubclass(frame.representation_type, BaseGeodeticRepresentation):
             wcs.wcs.name = "Planetographic Body-Fixed"
-        else:
+        elif issubclass(frame.representation_type, BaseBodycentricRepresentation):
             wcs.wcs.name = "Planetocentric Body-Fixed"
     else:
         return None

@@ -8,7 +8,11 @@ from packaging.version import Version
 
 from astropy import units as u
 from astropy.coordinates import ITRS, EarthLocation, SkyCoord
-from astropy.coordinates.representation.geodetic import WGS84GeodeticRepresentation
+from astropy.coordinates.representation.geodetic import (
+    BaseBodycentricRepresentation,
+    BaseGeodeticRepresentation,
+    WGS84GeodeticRepresentation,
+)
 from astropy.io import fits
 from astropy.time import Time
 from astropy.units import Quantity
@@ -44,6 +48,10 @@ from astropy.wcs.wcs import (
     Sip,
 )
 from astropy.wcs.wcsapi.fitswcs import SlicedFITSWCS
+
+from astropy.coordinates.tests.test_geodetic_representations import (
+    IAUMARS2000BodycentricRepresentation,
+)
 
 
 def test_wcs_dropping():
@@ -304,7 +312,6 @@ def test_wcs_to_celestial_frame():
     mywcs.wcs.ctype = ["RA---TAN", "DEC--TAN"]
     mywcs.wcs.equinox = 1987.0
     mywcs.wcs.set()
-    print(mywcs.to_header())
     frame = wcs_to_celestial_frame(mywcs)
     assert isinstance(frame, FK5)
     assert frame.equinox == Time(1987.0, format="jyear")
@@ -340,7 +347,16 @@ def test_wcs_to_celestial_frame():
     frame = wcs_to_celestial_frame(mywcs)
     assert isinstance(frame, BodyBaseCoordinateFrame)
     assert frame.obstime == Time("2017-08-17T12:41:04.430")
-    assert frame.representation._ographic is False
+    assert frame.representation_type == BaseBodycentricRepresentation
+
+    mywcs = WCS(naxis=2)
+    mywcs.wcs.ctype = ["EALN-TAN", "EALT-TAN"]
+    mywcs.wcs.radesys = "ICRS"
+    mywcs.wcs.name = "Earth Geodetic Body-Fixed"
+    mywcs.wcs.set()
+    frame = wcs_to_celestial_frame(mywcs)
+    assert isinstance(frame, BodyBaseCoordinateFrame)
+    assert frame.representation_type == BaseGeodeticRepresentation
 
     for equinox in [np.nan, 1987, 1982]:
         mywcs = WCS(naxis=2)
@@ -501,6 +517,13 @@ def test_celestial_frame_to_wcs():
     assert tuple(mywcs.wcs.ctype) == ("LON--CAR", "LAT--CAR")
     assert mywcs.wcs.dateobs == "2017-08-17T12:41:04.430"
     assert mywcs.wcs.name == "Planetographic Body-Fixed"
+
+    class IAUMARS2000BodyFrame(BodyBaseCoordinateFrame):
+        default_representation = IAUMARS2000BodycentricRepresentation
+
+    frame = IAUMARS2000BodyFrame()
+    mywcs = celestial_frame_to_wcs(frame, projection="CAR")
+    assert mywcs.wcs.name == "Planetocentric Body-Fixed"
 
 
 def test_celestial_frame_to_wcs_extend():

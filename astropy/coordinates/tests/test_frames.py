@@ -828,6 +828,7 @@ def test_basebodyframe_attributes():
 
     wgs84 = WGS84BodyFrame180(325 * u.deg, 2 * u.deg)
     assert wgs84.representation == WGS84GeodeticRepresentation
+    assert wgs84.lon.wrap_angle == WGS84GeodeticRepresentation._wrap_angle
     assert wgs84.lon == -35 * u.deg
     assert wgs84.lat == 2 * u.deg
     assert wgs84.height == 0.0 * u.m
