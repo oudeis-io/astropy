@@ -128,6 +128,10 @@ def _wcs_to_celestial_frame_builtin(wcs):
         elif ("LN" in xcoord and "LT" in ycoord and "H" not in xcoord) or (
             "LON" in xcoord and "LAT" in ycoord
         ):
+            a_radius = wcs.wcs.aux.a_radius
+            b_radius = wcs.wcs.aux.b_radius
+            c_radius = wcs.wcs.aux.c_radius
+            print(a_radius, b_radius, c_radius)
             if "ocentric" in wcs.wcs.name:
                 baserepresentation = BaseBodycentricRepresentation
             else:

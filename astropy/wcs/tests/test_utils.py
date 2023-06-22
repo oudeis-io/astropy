@@ -343,6 +343,9 @@ def test_wcs_to_celestial_frame():
     mywcs.wcs.radesys = "ICRS"
     mywcs.wcs.dateobs = "2017-08-17T12:41:04.430"
     mywcs.wcs.name = "Mars Planetocentric Body-Fixed"
+    mywcs.wcs.aux.a_radius = 3396190.0
+    mywcs.wcs.aux.b_radius = 3396190.0
+    mywcs.wcs.aux.c_radius = 3376190.0
     mywcs.wcs.set()
     frame = wcs_to_celestial_frame(mywcs)
     assert isinstance(frame, BodyBaseCoordinateFrame)
