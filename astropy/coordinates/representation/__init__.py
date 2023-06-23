@@ -9,7 +9,6 @@ from .cylindrical import CylindricalRepresentation, CylindricalDifferential
 from .geodetic import (
     BaseGeodeticRepresentation,
     BaseBodycentricRepresentation,
-    WestLongitudeMixin,
     WGS84GeodeticRepresentation,
     WGS72GeodeticRepresentation,
     GRS80GeodeticRepresentation,
@@ -59,7 +58,6 @@ __all__ = [
     "PhysicsSphericalDifferential",
     "BaseGeodeticRepresentation",
     "BaseBodycentricRepresentation",
-    "WestLongitudeMixin",
     "WGS84GeodeticRepresentation",
     "WGS72GeodeticRepresentation",
     "GRS80GeodeticRepresentation",

@@ -11,25 +11,6 @@ from .base import BaseRepresentation
 from .cartesian import CartesianRepresentation
 
 
-class WestLongitudeMixin:
-    """
-    Mixin for west positive longitude representation.
-    """
-
-    def to_cartesian(self):
-        cartesian = super().to_cartesian()
-        np.negative(cartesian._y, out=cartesian._y)
-        return cartesian
-
-    @classmethod
-    def from_cartesian(cls, cart):
-        angular = super().from_cartesian(cart)
-        lon = angular._lon
-        np.negative(lon, out=lon)
-        lon._wrap_at(lon.wrap_angle)
-        return angular
-
-
 ELLIPSOIDS = {}
 """Available ellipsoids (defined in erfam.h, with numbers exposed in erfa)."""
 # Note: they get filled by the creation of the geodetic classes.
@@ -64,13 +45,12 @@ class BaseGeodeticRepresentation(BaseRepresentation):
     Subclasses need to set attributes ``_equatorial_radius`` and ``_flattening``
     to quantities holding correct values (with units of length and dimensionless,
     respectively), or alternatively an ``_ellipsoid`` attribute to the relevant ERFA
-    index (as passed in to `erfa.eform`).
-    Longitudes are east positive and span from -180 to 180 degrees by default.
-    They can be made spanning from 0 to 360 degrees setting ``_wrap_angle=360 * u.deg``.
+    index (as passed in to `erfa.eform`). The geodetic latitude is defined by the
+    angle between the vertical to the surface at a specific point of the spheroid and
+    its projection onto the equatorial plane.
     """
 
     attr_classes = {"lon": Longitude, "lat": Latitude, "height": u.Quantity}
-    _wrap_angle = 180 * u.deg
 
     def __init_subclass__(cls, **kwargs):
         if "_ellipsoid" in cls.__dict__:
@@ -85,8 +65,6 @@ class BaseGeodeticRepresentation(BaseRepresentation):
             raise AttributeError(
                 f"{cls.__name__} requires '_ellipsoid' or '_equatorial_radius' and '_flattening'."
             )
-        if not u.Quantity(cls._wrap_angle).unit.is_equivalent(u.deg):
-            raise u.UnitTypeError("Attribute _wrap_angle requires angular units.")
         super().__init_subclass__(**kwargs)
 
     def __init__(self, lon, lat=None, height=None, copy=True):
@@ -123,12 +101,7 @@ class BaseGeodeticRepresentation(BaseRepresentation):
         lon, lat, height = erfa.gc2gde(
             cls._equatorial_radius, cls._flattening, cart.get_xyz(xyz_axis=-1)
         )
-        return cls(
-            Longitude(lon, wrap_angle=cls._wrap_angle),
-            lat,
-            height,
-            copy=False,
-        )
+        return cls(lon, lat, height, copy=False)
 
 
 @format_doc(geodetic_base_doc)
@@ -137,14 +110,11 @@ class BaseBodycentricRepresentation(BaseRepresentation):
 
     Subclasses need to set attributes ``_equatorial_radius`` and ``_flattening``
     to quantities holding correct values (with units of length and dimensionless,
-    respectively), or alternatively an ``_ellipsoid`` attribute to the relevant ERFA
-    index (as passed in to `erfa.eform`).
-    Longitudes are east positive and span from 0 to 360 degrees by default.
-    They can be made spanning from -180 to 180 degrees setting ``_wrap_angle=180 * u.deg``.
+    respectively). the bodycentric latitude and longitude are spherical latitude
+    and longitude relative to the barycenter of the body.
     """
 
     attr_classes = {"lon": Longitude, "lat": Latitude, "height": u.Quantity}
-    _wrap_angle = 360 * u.deg
 
     def __init_subclass__(cls, **kwargs):
         if (
@@ -154,8 +124,6 @@ class BaseBodycentricRepresentation(BaseRepresentation):
             raise AttributeError(
                 f"{cls.__name__} requires '_equatorial_radius' and '_flattening'."
             )
-        if not u.Quantity(cls._wrap_angle).unit.is_equivalent(u.deg):
-            raise u.UnitTypeError("Attribute _wrap_angle requires angular units.")
         super().__init_subclass__(**kwargs)
 
     def __init__(self, lon, lat=None, height=None, copy=True):
@@ -177,12 +145,8 @@ class BaseBodycentricRepresentation(BaseRepresentation):
         sinlat = np.sin(self.lat)
         coslon = np.cos(self.lon)
         sinlon = np.sin(self.lon)
-        x_spheroid = self._equatorial_radius * coslat * coslon
-        y_spheroid = self._equatorial_radius * coslat * sinlon
-        z_spheroid = self._equatorial_radius * (1 - self._flattening) * sinlat
         r = (
-            self._equatorial_radius
-            * np.sqrt(coslat**2 + ((1 - self._flattening) * sinlat) ** 2)
+            self._equatorial_radius * np.hypot(coslat, (1 - self._flattening) * sinlat)
             + self.height
         )
         x = r * coslon * coslat
@@ -201,16 +165,11 @@ class BaseBodycentricRepresentation(BaseRepresentation):
         d = np.hypot(p, cart.z)
         lat = np.arctan2(cart.z, p)
         p_spheroid = cls._equatorial_radius * np.cos(lat)
-        z_spheroid = (cls._equatorial_radius * (1 - cls._flattening)) * np.sin(lat)
+        z_spheroid = cls._equatorial_radius * (1 - cls._flattening) * np.sin(lat)
         r_spheroid = np.hypot(p_spheroid, z_spheroid)
         height = d - r_spheroid
         lon = np.arctan2(cart.y, cart.x)
-        return cls(
-            Longitude(lon, wrap_angle=cls._wrap_angle),
-            lat,
-            height,
-            copy=False,
-        )
+        return cls(lon, lat, height, copy=False)
 
 
 @format_doc(geodetic_base_doc)

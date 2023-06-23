@@ -25,15 +25,17 @@ By the numbers:
 
 .. _whatsnew-6.0-geodetic-representation-geometry:
 
-Define Geodetic Representations via their geometric parameters
-==============================================================
+Define Geodetic and Bodycentric Representations via their geometric parameters
+==============================================================================
 
 The user may now define custom spheroidal models for the Earth or other planetary
-bodies by subclassing `~astropy.coordinates.BaseGeodeticRepresentation` and defining
+bodies by subclassing `~astropy.coordinates.BaseGeodeticRepresentation` or
+`~astropy.coordinates.BaseBodycentricRepresentation` and defining
 ``_equatorial_radius`` and ``_flattening`` attributes::
 
 
-    >>> from astropy.coordinates import BaseGeodeticRepresentation, WGS84GeodeticRepresentation
+    >>> from astropy.coordinates import (BaseGeodeticRepresentation,
+    ...     WGS84GeodeticRepresentation, BaseBodycentricRepresentation)
     >>> from astropy import units as u
     >>> class IAU1976EarthGeodeticRepresentation(BaseGeodeticRepresentation):
     ...     _equatorial_radius = 6378140 * u.m
@@ -44,8 +46,14 @@ bodies by subclassing `~astropy.coordinates.BaseGeodeticRepresentation` and defi
     <CartesianRepresentation (x, y, z) in m
         (2481112.60371134, 2554647.09482601, 5274064.55958489)>
     >>> representation.represent_as(WGS84GeodeticRepresentation) # doctest: +FLOAT_CMP
-    <WGS84GeodeticRepresentation (lon, lat, height) in (deg, deg, m)
-        (45.8366, 56.14990022, 370.01796023)>
+    <WGS84GeodeticRepresentation (lon, lat, height) in (rad, rad, m)
+        (0.79999959, 0.98000063, 370.01796023)>
+    >>> class IAU1976EarthBodycentricRepresentation(BaseBodycentricRepresentation):
+    ...     _equatorial_radius = 6378140 * u.m
+    ...     _flattening = 0.3352805 * u.percent
+    >>> representation.represent_as(IAU1976EarthBodycentricRepresentation) # doctest: +FLOAT_CMP
+    <IAU1976EarthBodycentricRepresentation (lon, lat, height) in (rad, rad, m)
+        (0.79999959, 0.9768896, 336.12620429)>
 
 See :ref:`astropy-coordinates-create-geodetic` for more details.
 
@@ -54,6 +62,9 @@ See :ref:`astropy-coordinates-create-geodetic` for more details.
 
 Updates to `~astropy.cosmology`
 ===============================
+
+Writing to LaTeX
+----------------
 
 The :class:`~astropy.cosmology.Cosmology` class in :mod:`~astropy.cosmology` now
 supports the latex format in its :attr:`~astropy.cosmology.Cosmology.write()`
@@ -64,6 +75,37 @@ method, allowing users to export a cosmology object to a LaTeX table.::
 
 This will write the cosmology object to a file in LaTeX format,
 with appropriate formatting of units and table alignment.
+
+Renaming fields in I/O
+----------------------
+
+Most I/O methods in :mod:`~astropy.cosmology` (accessed by
+:meth:`~astropy.cosmology.Cosmology.read`,
+:meth:`~astropy.cosmology.Cosmology.write`,
+:meth:`~astropy.cosmology.Cosmology.from_format`,
+:meth:`~astropy.cosmology.Cosmology.to_format`) now support
+:ref:`renaming fields<cosmology_io_renaming_fields>`.
+
+For example, to rename the ``H0`` field to ``Hubble`` when converting to a table
+format::
+
+    >>> from astropy.cosmology import Planck18
+    >>> Planck18.to_format("astropy.table")  # No renaming
+    <QTable length=1>
+      name        H0        Om0    Tcmb0    Neff      m_nu      Ob0
+             km / (Mpc s)            K                 eV
+      str8     float64    float64 float64 float64  float64[3] float64
+    -------- ------------ ------- ------- ------- ----------- -------
+    Planck18        67.66 0.30966  2.7255   3.046 0.0 .. 0.06 0.04897
+
+    >>> Planck18.to_format("astropy.table", rename={"H0": "Hubble"})
+    <QTable length=1>
+      name      Hubble      Om0    Tcmb0    Neff      m_nu      Ob0
+             km / (Mpc s)            K                 eV
+      str8     float64    float64 float64 float64  float64[3] float64
+    -------- ------------ ------- ------- ------- ----------- -------
+    Planck18        67.66 0.30966  2.7255   3.046 0.0 .. 0.06 0.04897
+
 
 Full change log
 ===============
