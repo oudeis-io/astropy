@@ -7,8 +7,11 @@ import numpy as np
 import pytest
 
 from astropy import units as u
-from astropy.coordinates import EarthLocation, SkyCoord, galactocentric_frame_defaults
-from astropy.coordinates import WGS84GeodeticRepresentation
+from astropy.coordinates import (
+    EarthLocation,
+    SkyCoord,
+    galactocentric_frame_defaults,
+)
 from astropy.coordinates import representation as r
 from astropy.coordinates.attributes import (
     Attribute,
@@ -30,7 +33,6 @@ from astropy.coordinates.builtin_frames import (
     Galactic,
     Galactocentric,
     HADec,
-    BodyBaseCoordinateFrame,
 )
 from astropy.coordinates.representation import (
     REPRESENTATION_CLASSES,
@@ -42,8 +44,6 @@ from astropy.units import allclose
 from astropy.utils.exceptions import AstropyDeprecationWarning, AstropyWarning
 
 from .test_representation import unitphysics  # this fixture is used below  # noqa: F401
-
-from .test_geodetic_representations import IAUMARS2000BodycentricRepresentation
 
 
 def setup_function(func):
@@ -822,26 +822,6 @@ def test_hadec_attributes():
     assert_allclose(sr.lon, -1 * u.hourangle)
 
 
-def test_basebodyframe_attributes():
-    class WGS84BodyFrame180(BodyBaseCoordinateFrame):
-        representation = WGS84GeodeticRepresentation
-
-    wgs84 = WGS84BodyFrame180(325 * u.deg, 2 * u.deg)
-    assert wgs84.representation == WGS84GeodeticRepresentation
-    assert wgs84.lon.wrap_angle == WGS84GeodeticRepresentation._wrap_angle
-    assert wgs84.lon == -35 * u.deg
-    assert wgs84.lat == 2 * u.deg
-    assert wgs84.height == 0.0 * u.m
-    assert wgs84.obstime == None
-
-    class IAUMARS2000BodyFrame(BodyBaseCoordinateFrame):
-        default_representation = IAUMARS2000BodycentricRepresentation
-
-    mars2000 = IAUMARS2000BodyFrame(325 * u.deg, 2 * u.deg)
-    assert mars2000.lon == 325 * u.deg
-    assert mars2000.lon.wrap_angle == IAUMARS2000BodycentricRepresentation._wrap_angle
-
-
 def test_itrs_earth_location():
     loc = EarthLocation(lat=0 * u.deg, lon=0 * u.deg, height=0 * u.m)
     sat = EarthLocation(
@@ -868,6 +848,11 @@ def test_itrs_earth_location():
     assert_allclose(sat.lon, eloc2.lon)
     assert_allclose(sat.lat, eloc2.lat)
     assert_allclose(sat.height, eloc2.height)
+
+    wgs84 = ITRS(325 * u.deg, 2 * u.deg, representation_type="wgs84geodetic")
+    assert wgs84.lon == 325 * u.deg
+    assert wgs84.lat == 2 * u.deg
+    assert wgs84.height == 0.0 * u.m
 
 
 def test_representation():

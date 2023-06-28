@@ -73,7 +73,7 @@ def _wcs_to_celestial_frame_builtin(wcs):
         FK4NoETerms,
         Galactic,
         SphericalRepresentation,
-        BodyBaseCoordinateFrame,
+        BaseBodyCoordinateFrame,
     )
 
     # Import astropy.time here otherwise setup.py fails before extensions are compiled
@@ -131,13 +131,16 @@ def _wcs_to_celestial_frame_builtin(wcs):
             a_radius = wcs.wcs.aux.a_radius
             b_radius = wcs.wcs.aux.b_radius
             c_radius = wcs.wcs.aux.c_radius
-            print(a_radius, b_radius, c_radius)
+
             if "ocentric" in wcs.wcs.name:
                 baserepresentation = BaseBodycentricRepresentation
             else:
                 baserepresentation = BaseGeodeticRepresentation
 
-            frame = BodyBaseCoordinateFrame(
+            baserepresentation._equatorial_radius = a_radius * u.m
+            baserepresentation._flattening = (a_radius - c_radius) / a_radius
+
+            frame = BaseBodyCoordinateFrame(
                 representation_type=baserepresentation, obstime=wcs.wcs.dateobs or None
             )
         else:
@@ -156,7 +159,7 @@ def _celestial_frame_to_wcs_builtin(frame, projection="TAN"):
         BaseRADecFrame,
         FK4NoETerms,
         Galactic,
-        BodyBaseCoordinateFrame,
+        BaseBodyCoordinateFrame,
     )
 
     # Create a 2-dimensional WCS
@@ -186,7 +189,7 @@ def _celestial_frame_to_wcs_builtin(frame, projection="TAN"):
         ycoord = "TLAT"
         wcs.wcs.radesys = "ITRS"
         wcs.wcs.dateobs = frame.obstime.utc.isot
-    elif isinstance(frame, BodyBaseCoordinateFrame):
+    elif isinstance(frame, BaseBodyCoordinateFrame):
         xcoord = "LON-"
         ycoord = "LAT-"
         if frame.obstime is not None:
@@ -195,6 +198,16 @@ def _celestial_frame_to_wcs_builtin(frame, projection="TAN"):
             wcs.wcs.name = "Planetographic Body-Fixed"
         elif issubclass(frame.representation_type, BaseBodycentricRepresentation):
             wcs.wcs.name = "Planetocentric Body-Fixed"
+        if hasattr(frame.representation_type, "_equatorial_radius"):
+            wcs.wcs.aux.a_radius = frame.representation_type._equatorial_radius.value
+            wcs.wcs.aux.b_radius = frame.representation_type._equatorial_radius.value
+        if hasattr(frame.representation_type, "_flattening"):
+            wcs.wcs.aux.c_radius = wcs.wcs.aux.a_radius * (
+                1.0
+                - frame.representation_type._flattening.to(
+                    u.dimensionless_unscaled
+                ).value
+            )
     else:
         return None
 

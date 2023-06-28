@@ -282,7 +282,7 @@ def test_wcs_to_celestial_frame():
         ICRS,
         ITRS,
         Galactic,
-        BodyBaseCoordinateFrame,
+        BaseBodyCoordinateFrame,
     )
 
     mywcs = WCS(naxis=2)
@@ -348,9 +348,10 @@ def test_wcs_to_celestial_frame():
     mywcs.wcs.aux.c_radius = 3376190.0
     mywcs.wcs.set()
     frame = wcs_to_celestial_frame(mywcs)
-    assert isinstance(frame, BodyBaseCoordinateFrame)
+    assert isinstance(frame, BaseBodyCoordinateFrame)
     assert frame.obstime == Time("2017-08-17T12:41:04.430")
     assert frame.representation_type == BaseBodycentricRepresentation
+    assert frame.representation_type._equatorial_radius == 3396190.0 * u.m
 
     mywcs = WCS(naxis=2)
     mywcs.wcs.ctype = ["EALN-TAN", "EALT-TAN"]
@@ -358,7 +359,7 @@ def test_wcs_to_celestial_frame():
     mywcs.wcs.name = "Earth Geodetic Body-Fixed"
     mywcs.wcs.set()
     frame = wcs_to_celestial_frame(mywcs)
-    assert isinstance(frame, BodyBaseCoordinateFrame)
+    assert isinstance(frame, BaseBodyCoordinateFrame)
     assert frame.representation_type == BaseGeodeticRepresentation
 
     for equinox in [np.nan, 1987, 1982]:
@@ -439,7 +440,7 @@ def test_celestial_frame_to_wcs():
         BaseCoordinateFrame,
         FK4NoETerms,
         Galactic,
-        BodyBaseCoordinateFrame,
+        BaseBodyCoordinateFrame,
     )
 
     class FakeFrame(BaseCoordinateFrame):
@@ -511,7 +512,7 @@ def test_celestial_frame_to_wcs():
     assert mywcs.wcs.radesys == "ITRS"
     assert mywcs.wcs.dateobs == Time("J2000").utc.fits
 
-    class WGS84BodyFrame(BodyBaseCoordinateFrame):
+    class WGS84BodyFrame(BaseBodyCoordinateFrame):
         default_representation = WGS84GeodeticRepresentation
         obstime = Time("2017-08-17T12:41:04.43")
 
@@ -521,12 +522,15 @@ def test_celestial_frame_to_wcs():
     assert mywcs.wcs.dateobs == "2017-08-17T12:41:04.430"
     assert mywcs.wcs.name == "Planetographic Body-Fixed"
 
-    class IAUMARS2000BodyFrame(BodyBaseCoordinateFrame):
+    class IAUMARS2000BodyFrame(BaseBodyCoordinateFrame):
         default_representation = IAUMARS2000BodycentricRepresentation
 
     frame = IAUMARS2000BodyFrame()
     mywcs = celestial_frame_to_wcs(frame, projection="CAR")
     assert mywcs.wcs.name == "Planetocentric Body-Fixed"
+    assert mywcs.wcs.aux.a_radius == 3396190.0
+    assert mywcs.wcs.aux.b_radius == 3396190.0
+    assert_almost_equal(mywcs.wcs.aux.c_radius, 3376200.0)
 
 
 def test_celestial_frame_to_wcs_extend():

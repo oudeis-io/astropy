@@ -1,43 +1,34 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 
 
-from astropy.coordinates.attributes import TimeAttribute
+from astropy.coordinates.attributes import CoordinateAttribute, TimeAttribute
 from astropy.coordinates.baseframe import BaseCoordinateFrame, base_doc
-from astropy.coordinates.representation.geodetic import (
-    BaseGeodeticRepresentation,
-)
-
+from astropy.coordinates.representation import CartesianRepresentation
 from astropy.utils.decorators import format_doc
 
-__all__ = ["BodyBaseCoordinateFrame"]
+from .icrs import ICRS
 
-doc_components_body = """
-    lon : `~astropy.coordinates.Angle`, optional, keyword-only
-        The geodetic longitude for this object (``lat`` must also be given).
-    lat : `~astropy.coordinates.Angle`, optional, keyword-only
-        The geodetic latitude for this object (``lon`` must also be given).
-    height : `~astropy.units.Quantity` ['length'], optional, keyword-only
-        The distance for this object from the surface.
-    default_representation : `~astropy.coordinates.BaseGeodeticRepresentation`, keyword-only
-        The geodetic representation used to describe the body.
-"""
+__all__ = ["BaseBodyCoordinateFrame"]
 
 
-doc_footer_geo = """
+doc_footer = """
     Other parameters
     ----------------
+    naif_code : int, optional
+        The body NAIF code as defined in
+        <https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/FORTRAN/req/naif_ids.html#NAIF%20Object%20ID%20numbers>_
     object_name : str, optional
         The name of the body the frame is attached to.
+    observer : `~astropy.coordinates.SkyCoord`, optional
+        The coordinates of the observer.
     obstime : `~astropy.time.Time`, optional
         The time at which the observation is taken.  Used for determining the
-        position of the Earth. Defaults to J2000.
+        position of the planetary body. Defaults to J2000.
 """
 
 
-@format_doc(
-    base_doc, components=doc_components_body.format("specified location"), footer=""
-)
-class BodyBaseCoordinateFrame(BaseCoordinateFrame):
+@format_doc(base_doc, components="", footer=doc_footer)
+class BaseBodyCoordinateFrame(BaseCoordinateFrame):
     """
     Base class for body coordinate frames.
 
@@ -46,15 +37,9 @@ class BodyBaseCoordinateFrame(BaseCoordinateFrame):
     * Defines the frame attribute ``obstime`` for observation time.
     """
 
-    default_representation = BaseGeodeticRepresentation
+    default_representation = CartesianRepresentation
 
-    obstime = TimeAttribute(default=None)
+    naif_code = None
     object_name = None
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        if self.has_data:
-            if hasattr(self, "representation"):
-                self.data.lon.wrap_angle = self.representation._wrap_angle
-            else:
-                self.data.lon.wrap_angle = self.default_representation._wrap_angle
+    observer = CoordinateAttribute(ICRS, default=None)
+    obstime = TimeAttribute(default=None)
