@@ -8,6 +8,10 @@ planetary body which can be described by a geodetic or bodycentric representatio
 as discussed in :ref:`astropy:astropy-coordinates-design` and
 :ref:`astropy-coordinates-create-geodetic`.
 
+Note that we use the frame here only to store coordinates. To use it to determine, e.g.,
+where to point a telescope on Earth to observe Olympus Mons, one would need to add the
+frame to the transfer graph, which is beyond the scope of this example.
+
 To do this, first we need to define a subclass of a
 `~astropy.coordinates.BaseGeodeticRepresentation` and
 `~astropy.coordinates.BaseBodycentricRepresentation`, then a subclass of
@@ -104,15 +108,18 @@ class MarsCoordinateFrame(BaseCoordinateFrame):
 # representation with respect to the spherical model, assuming the point on the
 # surface of the body (``height = 0``)
 
-mars_sphere = MarsCoordinateFrame(lon=np.linspace(0, 2*np.pi, 128)*u.radian,
-                           lat=np.linspace(-0.5 * np.pi, 0.5 * np.pi, 128)*u.radian,
-                           representation_type=MarsSphere)
-mars = MarsCoordinateFrame(lon=np.linspace(0, 2*np.pi, 128)*u.radian,
-                           lat=np.linspace(-0.5 * np.pi, 0.5 * np.pi, 128)*u.radian,
-                           representation_type=MarsBestFitAeroid)
-mars_ocentric = MarsCoordinateFrame(lon=np.linspace(0, 2*np.pi, 128)*u.radian,
-                           lat=np.linspace(-0.5 * np.pi, 0.5 * np.pi, 128)*u.radian,
-                           representation_type=MarsBestFitOcentricAeroid)
+mars_sphere = MarsCoordinateFrame(
+    lon=np.linspace(0, 360, 128)*u.deg,
+    lat=np.linspace(-90, 90, 128)*u.deg,
+    representation_type=MarsSphere)
+mars = MarsCoordinateFrame(
+    lon=np.linspace(0, 360, 128)*u.deg,
+    lat=np.linspace(-90, 90, 128)*u.deg,
+    representation_type=MarsBestFitAeroid)
+mars_ocentric = MarsCoordinateFrame(
+    lon=np.linspace(0, 360, 128)*u.deg,
+    lat=np.linspace(-90, 90, 128)*u.deg,
+    representation_type=MarsBestFitOcentricAeroid)
 
 xyz_sphere = mars_sphere.represent_as(CartesianRepresentation)
 xyz = mars.represent_as(CartesianRepresentation)
@@ -120,23 +127,27 @@ xyz_ocentric = mars_ocentric.represent_as(CartesianRepresentation)
 
 fig, ax = plt.subplots(2, subplot_kw={"projection": "3d"})
 
-ax[0].scatter((xyz_sphere._x - xyz._x) << u.km,
-              (xyz_sphere._y - xyz._y) << u.km,
-              (xyz_sphere._z - xyz._z) << u.km)
+ax[0].scatter(
+    (xyz_sphere._x - xyz._x) << u.km,
+    (xyz_sphere._y - xyz._y) << u.km,
+    (xyz_sphere._z - xyz._z) << u.km)
 ax[0].tick_params(labelsize=8)
-ax[0].set(xlabel='x [Km]',
-          ylabel='y [Km]',
-          zlabel='z [Km]')
+ax[0].set(
+    xlabel='x [Km]',
+    ylabel='y [Km]',
+    zlabel='z [Km]')
 
 ax[0].set_title("Mars sphere - odetic spheroid difference")
 
-ax[1].scatter((xyz_sphere._x - xyz_ocentric._x) << u.km,
-              (xyz_sphere._y - xyz_ocentric._y) << u.km,
-              (xyz_sphere._z - xyz_ocentric._z) << u.km)
+ax[1].scatter(
+    (xyz_sphere._x - xyz_ocentric._x) << u.km,
+    (xyz_sphere._y - xyz_ocentric._y) << u.km,
+    (xyz_sphere._z - xyz_ocentric._z) << u.km)
 ax[1].tick_params(labelsize=8)
-ax[1].set(xlabel='x [Km]',
-          ylabel='y [Km]',
-          zlabel='z [Km]')
+ax[1].set(
+    xlabel='x [Km]',
+    ylabel='y [Km]',
+    zlabel='z [Km]')
 
 ax[1].set_title("Mars sphere - ocentric spheroid difference")
 
