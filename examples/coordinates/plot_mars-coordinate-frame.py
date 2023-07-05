@@ -31,7 +31,8 @@ representations.
 import matplotlib.pyplot as plt
 import numpy as np
 
-from astropy.visualization import astropy_mpl_style
+#import quantity support for visualization
+from astropy.visualization import astropy_mpl_style, quantity_support
 
 plt.style.use(astropy_mpl_style)
 
@@ -125,30 +126,31 @@ xyz_sphere = mars_sphere.represent_as(CartesianRepresentation)
 xyz = mars.represent_as(CartesianRepresentation)
 xyz_ocentric = mars_ocentric.represent_as(CartesianRepresentation)
 
-fig, ax = plt.subplots(2, subplot_kw={"projection": "3d"})
 
-ax[0].scatter(
-    (xyz_sphere._x - xyz._x) << u.km,
-    (xyz_sphere._y - xyz._y) << u.km,
-    (xyz_sphere._z - xyz._z) << u.km)
-ax[0].tick_params(labelsize=8)
-ax[0].set(
-    xlabel='x [Km]',
-    ylabel='y [Km]',
-    zlabel='z [Km]')
+with quantity_support():
+    fig, ax = plt.subplots(2, subplot_kw={"projection": "3d"})
+    ax[0].scatter(
+        (xyz_sphere.x - xyz.x) << u.km,
+        (xyz_sphere.y - xyz.y) << u.km,
+        (xyz_sphere.z - xyz.z) << u.km)
+    ax[0].tick_params(labelsize=8)
+    ax[0].set(
+        xlabel='x [Km]',
+        ylabel='y [Km]',
+        zlabel='z [Km]')
 
-ax[0].set_title("Mars sphere - odetic spheroid difference")
+    ax[0].set_title("Mars sphere - odetic spheroid difference")
 
-ax[1].scatter(
-    (xyz_sphere._x - xyz_ocentric._x) << u.km,
-    (xyz_sphere._y - xyz_ocentric._y) << u.km,
-    (xyz_sphere._z - xyz_ocentric._z) << u.km)
-ax[1].tick_params(labelsize=8)
-ax[1].set(
-    xlabel='x [Km]',
-    ylabel='y [Km]',
-    zlabel='z [Km]')
+    ax[1].scatter(
+        (xyz_sphere.x - xyz_ocentric.x) << u.km,
+        (xyz_sphere.y - xyz_ocentric.y) << u.km,
+        (xyz_sphere.z - xyz_ocentric.z) << u.km)
+    ax[1].tick_params(labelsize=8)
+    ax[1].set(
+        xlabel='x [Km]',
+        ylabel='y [Km]',
+        zlabel='z [Km]')
 
-ax[1].set_title("Mars sphere - ocentric spheroid difference")
+    ax[1].set_title("Mars sphere - ocentric spheroid difference")
 
-plt.show()
+    plt.show()
