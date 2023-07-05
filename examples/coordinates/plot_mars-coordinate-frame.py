@@ -31,9 +31,10 @@ representations.
 import matplotlib.pyplot as plt
 import numpy as np
 
-from astropy.visualization import astropy_mpl_style
+from astropy.visualization import astropy_mpl_style, quantity_support
 
 plt.style.use(astropy_mpl_style)
+quantity_support()
 
 
 ##############################################################################
@@ -53,6 +54,7 @@ from astropy.coordinates.representation.geodetic import (
 # Geodetic latitudes are used and longitudes span from 0 to 360 degrees east positive
 # It represent a best fit of the Mars spheroid to the martian geoid (areoid):
 
+
 class MarsBestFitAeroid(BaseGeodeticRepresentation):
     """
     A Spheroidal representation of Mars that minimized deviations with respect to the
@@ -64,9 +66,11 @@ class MarsBestFitAeroid(BaseGeodeticRepresentation):
     _equatorial_radius = 3395.4280 * u.km
     _flattening = 0.5227617843759314 * u.percent
 
+
 #####################################################################################
 # Now let's define a new geodetic representation obtained from MarsBestFitAeroid but
 # described by planetocentric latitudes.
+
 
 class MarsBestFitOcentricAeroid(BaseBodycentricRepresentation):
     """
@@ -79,9 +83,11 @@ class MarsBestFitOcentricAeroid(BaseBodycentricRepresentation):
     _equatorial_radius = 3395.4280 * u.km
     _flattening = 0.5227617843759314 * u.percent
 
+
 #############################################################################
 # As a comparison we define a new spherical frame representation, we could
 # have based it on `~astropy.coordinates.BaseBodycentricRepresentation` too.
+
 
 class MarsSphere(BaseGeodeticRepresentation):
     """
@@ -91,9 +97,11 @@ class MarsSphere(BaseGeodeticRepresentation):
     _equatorial_radius = 3395.4280 * u.km
     _flattening = 0.0 * u.percent
 
+
 #############################################################################
 # The new planetary body-fixed reference system will be described using the
 # previous defined representations.
+
 
 class MarsCoordinateFrame(BaseCoordinateFrame):
     """
@@ -109,17 +117,20 @@ class MarsCoordinateFrame(BaseCoordinateFrame):
 # surface of the body (``height = 0``)
 
 mars_sphere = MarsCoordinateFrame(
-    lon=np.linspace(0, 360, 128)*u.deg,
-    lat=np.linspace(-90, 90, 128)*u.deg,
-    representation_type=MarsSphere)
+    lon=np.linspace(0, 360, 128) * u.deg,
+    lat=np.linspace(-90, 90, 128) * u.deg,
+    representation_type=MarsSphere,
+)
 mars = MarsCoordinateFrame(
-    lon=np.linspace(0, 360, 128)*u.deg,
-    lat=np.linspace(-90, 90, 128)*u.deg,
-    representation_type=MarsBestFitAeroid)
+    lon=np.linspace(0, 360, 128) * u.deg,
+    lat=np.linspace(-90, 90, 128) * u.deg,
+    representation_type=MarsBestFitAeroid,
+)
 mars_ocentric = MarsCoordinateFrame(
-    lon=np.linspace(0, 360, 128)*u.deg,
-    lat=np.linspace(-90, 90, 128)*u.deg,
-    representation_type=MarsBestFitOcentricAeroid)
+    lon=np.linspace(0, 360, 128) * u.deg,
+    lat=np.linspace(-90, 90, 128) * u.deg,
+    representation_type=MarsBestFitOcentricAeroid,
+)
 
 xyz_sphere = mars_sphere.represent_as(CartesianRepresentation)
 xyz = mars.represent_as(CartesianRepresentation)
@@ -127,28 +138,15 @@ xyz_ocentric = mars_ocentric.represent_as(CartesianRepresentation)
 
 fig, ax = plt.subplots(2, subplot_kw={"projection": "3d"})
 
-ax[0].scatter(
-    (xyz_sphere._x - xyz._x) << u.km,
-    (xyz_sphere._y - xyz._y) << u.km,
-    (xyz_sphere._z - xyz._z) << u.km)
+ax[0].scatter(*((xyz - xyz_sphere).xyz << u.km))
 ax[0].tick_params(labelsize=8)
-ax[0].set(
-    xlabel='x [Km]',
-    ylabel='y [Km]',
-    zlabel='z [Km]')
+ax[0].set(xlabel="x [km]", ylabel="y [km]", zlabel="z [km]")
+ax[0].set_title("Mars-odetic spheroid difference from sphere")
 
-ax[0].set_title("Mars sphere - odetic spheroid difference")
-
-ax[1].scatter(
-    (xyz_sphere._x - xyz_ocentric._x) << u.km,
-    (xyz_sphere._y - xyz_ocentric._y) << u.km,
-    (xyz_sphere._z - xyz_ocentric._z) << u.km)
+ax[1].scatter(*((xyz_ocentric - xyz_sphere).xyz << u.km))
 ax[1].tick_params(labelsize=8)
-ax[1].set(
-    xlabel='x [Km]',
-    ylabel='y [Km]',
-    zlabel='z [Km]')
+ax[1].set(xlabel="x [km]", ylabel="y [km]", zlabel="z [km]")
 
-ax[1].set_title("Mars sphere - ocentric spheroid difference")
+ax[1].set_title("Mars-ocentric spheroid difference from sphere")
 
 plt.show()
