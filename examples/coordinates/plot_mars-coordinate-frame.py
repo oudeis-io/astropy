@@ -18,7 +18,7 @@ To do this, first we need to define a subclass of a
 `~astropy.coordinates.BaseCoordinateFrame` using the previous defined
 representations.
 
-*By: Chiara Marmo*
+*By: Chiara Marmo, Marten van Kerkwijk*
 
 *License: BSD*
 
